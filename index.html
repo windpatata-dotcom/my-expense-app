@@ -50,7 +50,12 @@
     // ⚠️ 請在此處貼上您的 Google Apps Script 網址
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0DVBfxq5Ty1nuJMKIBmqTDR1bVdsyHpvQi7grTI7sXeUY_tw530uFUexrc9GIAHa7/exec";
 
-    document.getElementById('dateInput').valueAsDate = getLocalDateStr();
+    // 設定今天日期（本地時區，避免跨裝置誤差）
+    const today = new Date();
+    const dateStr = today.getFullYear() + '-' +
+        String(today.getMonth() + 1).padStart(2, '0') + '-' +
+        String(today.getDate()).padStart(2, '0');
+    document.getElementById('dateInput').value = dateStr;
     let records = [];
 
     async function fetchRecords() {
@@ -74,8 +79,10 @@
         };
 
         document.getElementById('status').innerText = "同步寫入中...";
+        // mode: 'no-cors' 確保手機瀏覽器也能正常送出資料至 Google Apps Script
         await fetch(SCRIPT_URL, {
             method: "POST",
+            mode: "no-cors",
             body: JSON.stringify(data)
         });
         
