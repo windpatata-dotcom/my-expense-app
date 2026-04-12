@@ -50,7 +50,7 @@
     // ⚠️ 請在此處貼上您的 Google Apps Script 網址
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0DVBfxq5Ty1nuJMKIBmqTDR1bVdsyHpvQi7grTI7sXeUY_tw530uFUexrc9GIAHa7/exec";
 
-    document.getElementById('dateInput').valueAsDate = new Date();
+    document.getElementById('dateInput').valueAsDate = getLocalDateStr();
     let records = [];
 
     async function fetchRecords() {
