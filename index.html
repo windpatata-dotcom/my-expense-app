@@ -3,357 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>個人家計簿管理系統</title>
+    <title>個人家計簿 - 雲端同步版</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            --primary-color: #4a6fa5;
-            --secondary-color: #6c757d;
-            --bg-color: #f8f9fa;
-            --card-bg: #ffffff;
-            --text-color: #333;
-            --accent-color: #e74c3c;
-        }
-
-        body {
-            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        h1 { color: var(--primary-color); margin-bottom: 5px; }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
-        }
-
-        /* 表單設計 */
-        .form-group {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            align-items: flex-end;
-        }
-
-        label { display: block; font-size: 0.9rem; font-weight: bold; margin-bottom: 5px; color: var(--secondary-color); }
-
-        input, select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 1rem;
-        }
-
-        button {
-            cursor: pointer;
-            border: none;
-            border-radius: 6px;
-            padding: 10px 20px;
-            font-weight: bold;
-            transition: 0.3s;
-        }
-
-        .btn-add { background-color: var(--primary-color); color: white; width: 100%; margin-top: 10px; }
-        .btn-add:hover { background-color: #3b5984; }
-
-        .btn-export { background-color: #27ae60; color: white; }
-        .btn-export:hover { background-color: #1e8449; }
-
-        /* 儀表板與分析 */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-
-        .total-display {
-            font-size: 1.5rem;
-            font-weight: bold;
-            text-align: right;
-            color: var(--primary-color);
-            margin: 10px 0;
-        }
-
-        /* 表格樣式 */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th, td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-        }
-
-        th { background-color: #f2f4f7; font-size: 0.9rem; }
-
-        .btn-delete {
-            background-color: #fff;
-            color: var(--accent-color);
-            border: 1px solid var(--accent-color);
-            padding: 4px 8px;
-            font-size: 0.8rem;
-        }
-
-        .btn-delete:hover { background-color: var(--accent-color); color: white; }
-
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
-
-        @media (max-width: 600px) {
-            .form-group { grid-template-columns: 1fr; }
-        }
+        :root { --primary-color: #4a6fa5; --bg-color: #f8f9fa; }
+        body { font-family: sans-serif; background: var(--bg-color); padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .form-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: var(--primary-color); color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
+        .loading { color: #666; font-style: italic; }
     </style>
 </head>
 <body>
-
 <div class="container">
-    <header>
-        <h1>家計簿管理系統</h1>
-        <p>數據驅動，理財有道</p>
-    </header>
-
     <div class="card">
+        <h2>雲端家計簿 (同步中)</h2>
+        <div id="status" class="loading">正在連線至雲端試算表...</div>
         <div class="form-group">
-            <div>
-                <label>日期</label>
-                <input type="date" id="dateInput">
-            </div>
-            <div>
-                <label>消費項目</label>
-                <input type="text" id="itemInput" placeholder="例如：加油、午餐">
-            </div>
-            <div>
-                <label>金額</label>
-                <input type="number" id="amountInput" placeholder="0">
-            </div>
-            <div>
-                <label>分類</label>
-                <select id="categoryInput">
-                    <option value="車相關">車相關</option>
-                    <option value="出差報帳">出差報帳</option>
-                    <option value="個人交際">個人交際</option>
-                    <option value="生活餐飲">生活餐飲</option>
-                    <option value="娛樂購物">娛樂購物</option>
-                    <option value="3C類">3C類</option>
-                    <option value="3C-串流">3C-串流</option>
-                </select>
-            </div>
+            <input type="date" id="dateInput">
+            <input type="text" id="itemInput" placeholder="品項">
+            <input type="number" id="amountInput" placeholder="金額">
+            <select id="categoryInput">
+                <option value="車相關">車相關</option><option value="出差報帳">出差報帳</option>
+                <option value="個人交際">個人交際</option><option value="生活餐飲">生活餐飲</option>
+                <option value="娛樂購物">娛樂購物</option><option value="3C類">3C類</option>
+                <option value="3C-串流">3C-串流</option>
+            </select>
         </div>
-        <button class="btn-add" onclick="addRecord()">新增一筆消費</button>
-    </div>
-
-    <div class="stats-grid">
-        <div class="card">
-            <label>本月分類比例 (月分析)</label>
-            <div class="chart-container">
-                <canvas id="monthChart"></canvas>
-            </div>
-        </div>
-        <div class="card">
-            <label>年度支出趨勢 (年分析)</label>
-            <div class="chart-container">
-                <canvas id="yearChart"></canvas>
-            </div>
-        </div>
+        <button onclick="addRecord()">同步新增至雲端</button>
     </div>
 
     <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label>最近 10 筆消費紀錄</label>
-            <button class="btn-export" onclick="exportCSV()">匯出 CSV</button>
-        </div>
-        <div class="total-display" id="totalAmountDisplay">總支出總計: $0</div>
-        <div style="overflow-x: auto;">
-            <table id="recordTable">
-                <thead>
-                    <tr>
-                        <th>日期</th>
-                        <th>項目</th>
-                        <th>金額</th>
-                        <th>分類</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody id="recordBody"></tbody>
-            </table>
-        </div>
+        <h3>最近消費 (雲端數據)</h3>
+        <table id="recordTable">
+            <thead><tr><th>日期</th><th>項目</th><th>金額</th><th>分類</th></tr></thead>
+            <tbody id="recordBody"></tbody>
+        </table>
     </div>
 </div>
 
 <script>
-    let records = JSON.parse(localStorage.getItem('myExpenses')) || [];
-    let monthChart, yearChart;
+    // ⚠️ 請在此處貼上您的 Google Apps Script 網址
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0DVBfxq5Ty1nuJMKIBmqTDR1bVdsyHpvQi7grTI7sXeUY_tw530uFUexrc9GIAHa7/exec";
 
-    // 初始化：設定預設日期為今天
     document.getElementById('dateInput').valueAsDate = new Date();
+    let records = [];
 
-    function init() {
-        updateTable();
-        updateCharts();
-        updateTotal();
+    async function fetchRecords() {
+        document.getElementById('status').innerText = "讀取雲端資料中...";
+        try {
+            const response = await fetch(SCRIPT_URL);
+            records = await response.json();
+            renderTable();
+            document.getElementById('status').innerText = "雲端同步已就緒";
+        } catch (e) {
+            document.getElementById('status').innerText = "讀取失敗，請檢查網址";
+        }
     }
 
-    // 新增資料
-    function addRecord() {
-        const date = document.getElementById('dateInput').value;
-        const item = document.getElementById('itemInput').value;
-        const amount = parseFloat(document.getElementById('amountInput').value);
-        const category = document.getElementById('categoryInput').value;
+    async function addRecord() {
+        const data = {
+            date: document.getElementById('dateInput').value,
+            item: document.getElementById('itemInput').value,
+            amount: document.getElementById('amountInput').value,
+            category: document.getElementById('categoryInput').value
+        };
 
-        if (!date || !item || isNaN(amount)) {
-            alert('請填寫完整資訊');
-            return;
-        }
-
-        const newRecord = { id: Date.now(), date, item, amount, category };
-        records.push(newRecord);
-        saveData();
+        document.getElementById('status').innerText = "同步寫入中...";
+        await fetch(SCRIPT_URL, {
+            method: "POST",
+            body: JSON.stringify(data)
+        });
         
-        // 清空欄位
         document.getElementById('itemInput').value = '';
         document.getElementById('amountInput').value = '';
-        init();
+        fetchRecords();
     }
 
-    // 刪除資料
-    function deleteRecord(id) {
-        records = records.filter(r => r.id !== id);
-        saveData();
-        init();
-    }
-
-    // 儲存資料
-    function saveData() {
-        localStorage.setItem('myExpenses', JSON.stringify(records));
-    }
-
-    // 更新表格 (顯示最近10筆)
-    function updateTable() {
-        const tbody = document.getElementById('recordBody');
-        tbody.innerHTML = '';
-        
-        const sortedRecords = [...records].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
-        
-        sortedRecords.forEach(r => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${r.date}</td>
-                <td>${r.item}</td>
-                <td>$${r.amount.toLocaleString()}</td>
-                <td>${r.category}</td>
-                <td><button class="btn-delete" onclick="deleteRecord(${r.id})">刪除</button></td>
-            `;
-            tbody.appendChild(tr);
+    function renderTable() {
+        const body = document.getElementById('recordBody');
+        body.innerHTML = '';
+        records.slice().reverse().slice(0, 10).forEach(r => {
+            const row = `<tr><td>${r.date.split('T')[0]}</td><td>${r.item}</td><td>${r.amount}</td><td>${r.category}</td></tr>`;
+            body.innerHTML += row;
         });
     }
 
-    // 計算總計
-    function updateTotal() {
-        const total = records.reduce((sum, r) => sum + r.amount, 0);
-        document.getElementById('totalAmountDisplay').innerText = `總支出總計: $${total.toLocaleString()}`;
-    }
-
-    // 更新圖表
-    function updateCharts() {
-        const now = new Date();
-        const currentMonth = now.toISOString().substring(0, 7); // YYYY-MM
-        const currentYear = now.getFullYear().toString();
-
-        // 月分析數據
-        const categories = ["車相關", "出差報帳", "個人交際", "生活餐飲", "娛樂購物", "3C類", "3C-串流"];
-        const monthData = categories.map(cat => {
-            return records
-                .filter(r => r.date.startsWith(currentMonth) && r.category === cat)
-                .reduce((sum, r) => sum + r.amount, 0);
-        });
-
-        // 年分析趨勢 (1-12月)
-        const yearTrends = Array(12).fill(0);
-        records.filter(r => r.date.startsWith(currentYear)).forEach(r => {
-            const m = parseInt(r.date.split('-')[1]) - 1;
-            yearTrends[m] += r.amount;
-        });
-
-        // 銷毀舊圖表
-        if (monthChart) monthChart.destroy();
-        if (yearChart) yearChart.destroy();
-
-        // 繪製圓餅圖 (月)
-        monthChart = new Chart(document.getElementById('monthChart'), {
-            type: 'doughnut',
-            data: {
-                labels: categories,
-                datasets: [{
-                    data: monthData,
-                    backgroundColor: ['#4a6fa5', '#6c757d', '#f1c40f', '#27ae60', '#e67e22', '#9b59b6', '#34495e']
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-
-        // 繪製長條圖 (年)
-        yearChart = new Chart(document.getElementById('yearChart'), {
-            type: 'bar',
-            data: {
-                labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
-                datasets: [{
-                    label: '每月總支出',
-                    data: yearTrends,
-                    backgroundColor: '#4a6fa5'
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-    }
-
-    // 匯出 CSV
-    function exportCSV() {
-        if (records.length === 0) return alert('目前無資料可匯出');
-        
-        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // 加入 BOM 避免 Excel 亂碼
-        csvContent += "日期,項目,金額,分類\n";
-        
-        records.forEach(r => {
-            csvContent += `${r.date},${r.item},${r.amount},${r.category}\n`;
-        });
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `家計簿匯出_${new Date().toLocaleDateString()}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    // 啟動
-    init();
+    fetchRecords();
 </script>
-
 </body>
 </html>
