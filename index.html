@@ -774,10 +774,11 @@ async function exportQuarterlyToExcel(){
 const GDRIVE_FILE_NAME = 'apple_budget_data.json';
 const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
 const LS_GDRIVE_CID = 'apple_gdrive_cid';
+const LS_GDRIVE_FID = 'apple_gdrive_fid'; // shared file ID override
 const GDRIVE_CLIENT_ID_DEFAULT = '617984798305-ie4697usvtj7pnnqoo2fnmv5p44k4i15.apps.googleusercontent.com';
 
 let gToken = null;
-let gFileId = null;
+let gFileId = localStorage.getItem(LS_GDRIVE_FID)||null;
 let gTokenClient = null;
 let gSyncStatus = 'unlinked'; // unlinked | linked | syncing | error
 
@@ -819,14 +820,22 @@ function gSignOut(){
 }
 
 async function gFindFile(){
-  const name = encodeURIComponent(`name='${GDRIVE_FILE_NAME}'`);
+  // Use stored file ID if available
+  const stored = localStorage.getItem(LS_GDRIVE_FID);
+  if(stored) return stored;
+  // Search by name
   const resp = await fetch(
     `https://www.googleapis.com/drive/v3/files?q=name%3D%27${GDRIVE_FILE_NAME}%27+and+trashed%3Dfalse&spaces=drive&fields=files(id,name)`,
     { headers: { Authorization: `Bearer ${gToken}` } }
   );
   if(!resp.ok) throw new Error('gFindFile '+resp.status);
   const data = await resp.json();
-  return (data.files && data.files.length>0) ? data.files[0].id : null;
+  if(data.files && data.files.length>0){
+    const id = data.files[0].id;
+    localStorage.setItem(LS_GDRIVE_FID, id); // remember it
+    return id;
+  }
+  return null;
 }
 
 async function gLoadData(){
@@ -891,6 +900,7 @@ async function gSaveData(){
       if(!r.ok) throw new Error('gSaveData POST '+r.status);
       const created = await r.json();
       gFileId = created.id;
+      localStorage.setItem(LS_GDRIVE_FID, gFileId);
     }
     gSyncStatus = 'linked'; updateSyncBadge();
     toast('✅ 已存檔到 Google Drive');
@@ -915,6 +925,26 @@ function updateSaveBtnVisibility(){
   if(btn) btn.style.background = gToken ? '#10B981' : '#9CA3AF';
 }
 
+function copyFid(){
+  const el = document.getElementById('fid-display');
+  if(!el) return;
+  navigator.clipboard.writeText(el.value).then(()=>toast('✅ 已複製檔案 ID')).catch(()=>{ el.select(); document.execCommand('copy'); toast('✅ 已複製'); });
+}
+function setSharedFid(){
+  const val = (document.getElementById('fid-input')||{}).value||'';
+  if(!val.trim()){ toast('請填入檔案 ID'); return; }
+  localStorage.setItem(LS_GDRIVE_FID, val.trim());
+  gFileId = val.trim();
+  renderSettings();
+  toast('✅ 已套用共用檔案 ID，重新載入資料中…');
+  if(gToken) gLoadData();
+}
+function clearSharedFid(){
+  localStorage.removeItem(LS_GDRIVE_FID);
+  gFileId = null;
+  renderSettings();
+  toast('已清除檔案 ID');
+}
 function saveGClientIdFromInput(){
   const val = (document.getElementById('gdrive-cid-input')||{}).value||'';
   if(!val.trim()){ toast('請填入 Client ID'); return; }
@@ -2296,19 +2326,36 @@ function renderSettings(){
   </div>`;
   // Google Drive sync card
   const gBadge = {'unlinked':'🔌 未登入','linked':'✅ 已同步','syncing':'🔄 同步中…','error':'⚠️ 失敗'}[gSyncStatus]||'🔌 未登入';
+  const sharedFid = localStorage.getItem(LS_GDRIVE_FID)||'';
   html+=`<div class="card">
     <div class="card-t">☁️ Google Drive 同步
       <span id="sync-badge" style="float:right;font-size:12px;font-weight:400;color:var(--c5);">${gBadge}</span>
     </div>
-    <p style="font-size:13px;color:var(--c5);margin-bottom:12px;">登入後，可讀取雲端資料；記帳完畢後按畫面右下角的 <b>💾 存檔</b> 即可同步到 Google Drive。手機與電腦共用同一份資料。</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+    <p style="font-size:13px;color:var(--c5);margin-bottom:12px;">登入後，可讀取雲端資料；記帳完畢後按畫面右下角的 <b>💾 存檔</b> 即可同步到 Google Drive。</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
       ${gToken
         ? `<button class="btn2" onclick="gLoadData()">📥 重新載入雲端資料</button>
            <button class="btnd" onclick="gSignOut()">登出 Google</button>`
         : `<button class="btng" onclick="gSignIn()">🔑 登入 Google</button>`
       }
     </div>
-    ${gToken ? `<div style="font-size:12px;color:#10B981;">✅ 已連結 Google Drive</div>` : ''}
+    ${gToken && gFileId ? `<div style="font-size:12px;color:#10B981;margin-bottom:10px;">✅ 已連結 Google Drive</div>` : ''}
+    <div style="border-top:1px solid var(--c3);padding-top:12px;margin-top:4px;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:6px;">👨‍👩‍👧 家人共用設定</div>
+      <p style="font-size:12px;color:var(--c5);margin-bottom:8px;">家人要看到同一份資料，請填入共用檔案 ID。持有人先存檔後，把下方的檔案 ID 複製給家人填入。</p>
+      ${sharedFid ? `<div style="font-size:12px;color:var(--c5);margin-bottom:6px;">目前檔案 ID：</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;">
+          <input type="text" value="${sharedFid}" readonly id="fid-display"
+            style="flex:1;padding:7px 10px;border:1px solid var(--c3);border-radius:8px;font-size:12px;background:var(--c1);color:var(--c7);">
+          <button class="btn2" onclick="copyFid()" style="white-space:nowrap;">複製</button>
+        </div>` : ''}
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="text" id="fid-input" placeholder="貼上共用檔案 ID…"
+          style="flex:1;padding:7px 10px;border:1px solid var(--c3);border-radius:8px;font-size:12px;">
+        <button class="btn2" onclick="setSharedFid()" style="white-space:nowrap;">套用</button>
+        ${sharedFid ? `<button class="btnd" onclick="clearSharedFid()" style="white-space:nowrap;">清除</button>` : ''}
+      </div>
+    </div>
   </div>`;
   html+=`<div style="text-align:center;font-size:12px;color:var(--c5);padding:16px;">蘋果家記帳 v1.2 · 資料儲存於本裝置 + Google Drive</div>`;
   el.innerHTML=html;
