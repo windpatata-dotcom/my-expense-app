@@ -1,106 +1,2581 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>個人家計簿 - 雲端同步版</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root { --primary-color: #4a6fa5; --bg-color: #f8f9fa; }
-        body { font-family: sans-serif; background: var(--bg-color); padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .form-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-        button { background: var(--primary-color); color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
-        .loading { color: #666; font-style: italic; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>蘋果家記帳</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{--p:#6366F1;--pl:#EEF2FF;--g:#10B981;--r:#EF4444;--w:#F59E0B;--c1:#F9FAFB;--c2:#F3F4F6;--c3:#E5E7EB;--c4:#D1D5DB;--c5:#6B7280;--c7:#374151;--c9:#111827;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC','Noto Sans TC','Segoe UI',sans-serif;background:var(--c2);color:var(--c9);padding-bottom:72px;font-size:15px;min-height:100vh;}
+/* Screens */
+.screen{display:none;padding:16px;max-width:600px;margin:0 auto;}
+.screen.active{display:block;}
+.screen-header{font-size:22px;font-weight:700;margin-bottom:16px;}
+/* Bottom Nav */
+.bnav{position:fixed;bottom:0;left:0;right:0;height:64px;background:white;border-top:1px solid var(--c3);display:flex;align-items:center;z-index:1000;box-shadow:0 -2px 16px rgba(0,0,0,0.06);}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border:none;background:none;cursor:pointer;color:var(--c5);font-size:11px;font-family:inherit;transition:color 0.2s;}
+.ni .ic{font-size:22px;line-height:1;}
+.ni.on{color:var(--p);}
+/* Cards */
+.card{background:white;border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.card-t{font-size:13px;color:var(--c5);margin-bottom:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
+/* Summary */
+.sum3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+.scard{background:white;border-radius:14px;padding:12px 8px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.scard .sl{font-size:11px;color:var(--c5);margin-bottom:4px;}
+.scard .sv{font-size:15px;font-weight:700;}
+.scard.inc .sv{color:var(--g);}
+.scard.exp .sv{color:var(--r);}
+.scard.net .sv{color:var(--p);}
+/* Form */
+.fg{margin-bottom:14px;}
+.fl{font-size:13px;color:var(--c5);margin-bottom:6px;display:block;font-weight:500;}
+.fi{width:100%;border:1.5px solid var(--c3);border-radius:10px;padding:10px 14px;font-size:15px;background:white;color:var(--c9);outline:none;transition:border-color 0.2s;-webkit-appearance:none;font-family:inherit;}
+.fi:focus{border-color:var(--p);}
+.fi.big{font-size:26px;font-weight:700;text-align:center;padding:14px;letter-spacing:1px;}
+select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer;}
+/* Toggle */
+.toggle{display:flex;background:var(--c2);border-radius:12px;padding:4px;margin-bottom:16px;}
+.tbtn{flex:1;padding:9px 6px;border:none;background:none;cursor:pointer;border-radius:10px;font-size:14px;font-weight:500;color:var(--c5);transition:all 0.2s;font-family:inherit;}
+.tbtn.on{background:white;color:var(--c9);box-shadow:0 1px 4px rgba(0,0,0,0.1);}
+/* Category grid */
+.cg{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.cb{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 4px;border:2px solid var(--c3);border-radius:12px;cursor:pointer;background:white;font-size:11px;color:var(--c7);line-height:1.3;text-align:center;transition:all 0.15s;font-family:inherit;}
+.cb .em{font-size:20px;line-height:1;}
+.cb.on{border-color:var(--p);background:var(--pl);color:var(--p);}
+/* Sub cats */
+.scr{display:flex;gap:8px;margin-top:8px;}
+.sb{flex:1;padding:8px 4px;border:2px solid var(--c3);border-radius:10px;cursor:pointer;background:white;font-size:13px;text-align:center;font-family:inherit;color:var(--c7);transition:all 0.15s;}
+.sb.on{border-color:var(--p);background:var(--pl);color:var(--p);}
+/* Buttons */
+.btn1{width:100%;padding:14px;background:var(--p);color:white;border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:8px;}
+.btn1:active{opacity:.85;}
+.btn2{padding:10px 16px;background:var(--c2);color:var(--c7);border:none;border-radius:10px;font-size:14px;cursor:pointer;font-family:inherit;}
+.btnd{padding:7px 12px;background:#FEE2E2;color:var(--r);border:none;border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit;}
+.btng{padding:7px 12px;background:#D1FAE5;color:#065F46;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-family:inherit;}
+/* Transaction list */
+.txn{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--c2);}
+.txn:last-child{border-bottom:none;}
+.tic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:var(--c2);}
+.ti{flex:1;min-width:0;}
+.tn{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tm{font-size:12px;color:var(--c5);}
+.ta{font-size:15px;font-weight:600;flex-shrink:0;}
+.ta.e{color:var(--r);}
+.ta.i{color:var(--g);}
+.ta.f{color:var(--w);}
+/* Bar chart */
+.br{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.bl{font-size:13px;color:var(--c7);width:72px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bt{flex:1;background:var(--c2);border-radius:6px;height:10px;overflow:hidden;}
+.bf{height:100%;border-radius:6px;background:var(--p);transition:width .5s ease;}
+.bv{font-size:12px;color:var(--c5);width:64px;text-align:right;flex-shrink:0;}
+/* Month nav */
+.mnav{display:flex;align-items:center;justify-content:space-between;background:white;border-radius:14px;padding:12px 16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.mnb{background:none;border:none;font-size:22px;cursor:pointer;color:var(--c5);padding:2px 8px;line-height:1;}
+.mdt{font-size:17px;font-weight:700;}
+/* Section header */
+.sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.st{font-size:14px;font-weight:600;color:var(--c7);}
+.sv2{font-size:14px;font-weight:700;}
+/* Fixed items */
+.fi2{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--c2);}
+.fi2:last-child{border-bottom:none;}
+.fn{font-size:14px;color:var(--c7);}
+.fm{font-size:11px;color:var(--c5);}
+.fa{font-size:14px;font-weight:600;}
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:13px;}
+.tbl th{background:var(--c2);padding:8px 6px;text-align:center;font-weight:600;color:var(--c7);}
+.tbl td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--c2);}
+.tbl .tot td{font-weight:700;background:var(--c1);}
+/* Toast */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--c9);color:white;padding:10px 20px;border-radius:20px;font-size:14px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+/* Modal */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:none;align-items:flex-end;justify-content:center;}
+.ov.show{display:flex;}
+.ms{background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:600px;max-height:85vh;overflow-y:auto;}
+.mt{font-size:17px;font-weight:700;margin-bottom:16px;}
+/* Settings rows */
+.sr{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--c2);}
+.sr:last-child{border-bottom:none;}
+/* Empty state */
+.es{text-align:center;padding:40px 16px;color:var(--c5);}
+.es .ei{font-size:48px;margin-bottom:12px;}
+/* Chart container */
+.cc{position:relative;max-height:240px;}
+/* Quarter selector */
+.qsel{display:flex;gap:8px;margin-bottom:12px;}
+.qbtn{flex:1;padding:10px 4px;border:2px solid var(--c3);border-radius:12px;cursor:pointer;background:white;font-size:14px;font-weight:600;text-align:center;font-family:inherit;color:var(--c5);transition:all .15s;}
+.qbtn.on{border-color:var(--p);background:var(--pl);color:var(--p);}
+/* Tag */
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.tg{background:#D1FAE5;color:#065F46;}
+.tr{background:#FEE2E2;color:#991B1B;}
+.tb{background:#DBEAFE;color:#1E40AF;}
+.ty{background:#FEF3C7;color:#92400E;}
+/* Delete swipe hint - for desktop hover */
+.txn:hover .del-hint{opacity:1;}
+.del-hint{opacity:0;transition:opacity .2s;cursor:pointer;color:var(--r);font-size:18px;flex-shrink:0;padding:4px;}
+/* Compact single-line transaction row */
+.txn-compact{display:flex;align-items:center;gap:6px;padding:8px 2px;border-bottom:1px solid var(--c2);min-width:0;}
+.txn-compact:last-child{border-bottom:none;}
+.txn-compact:hover .del-hint{opacity:1;}
+.tc-main{flex:1;display:flex;align-items:center;flex-wrap:wrap;gap:4px;min-width:0;font-size:13px;}
+.tc-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+.tc-sep{color:var(--c5);white-space:nowrap;font-size:12px;}
+.tc-sep::before{content:'·';margin-right:4px;color:var(--c4);}
+.tc-amt{font-weight:600;white-space:nowrap;margin-left:auto;}
+.tc-amt.e{color:var(--r);}
+.tc-amt.f{color:var(--w);}
+.tc-amt.inc{color:var(--g);}
+/* Year-month filter bar */
+.ym-filter{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:10px 14px;background:white;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+.ym-filter label{font-size:12px;color:var(--c5);white-space:nowrap;}
+.ym-filter select{border:1.5px solid var(--c3);border-radius:8px;padding:5px 28px 5px 8px;font-size:13px;background:white;color:var(--c9);font-family:inherit;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;}
+.ym-filter select:focus{border-color:var(--p);outline:none;}
+/* Year inline select (mnav / report headers) */
+.yr-sel{border:none;background:transparent;font-size:17px;font-weight:700;color:var(--c9);font-family:inherit;cursor:pointer;-webkit-appearance:none;padding:0 18px 0 0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 2px center;}
+/* Big items */
+.big-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--c2);}
+.big-row:last-child{border-bottom:none;}
+.big-amt{font-size:16px;font-weight:700;flex-shrink:0;min-width:72px;text-align:right;}
+.big-info{flex:1;min-width:0;}
+.big-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.big-meta{font-size:12px;color:var(--c5);margin-top:1px;}
+/* Nav — 6 tabs */
+@media(max-width:600px){.ni{font-size:10px;}.ni .ic{font-size:20px;}}
+@media(max-width:400px){.sum3{gap:6px;}.scard .sv{font-size:14px;}}
+/* Amount input row */
+.amt-wrap{display:flex;gap:8px;align-items:stretch;}
+.amt-wrap .fi.big{flex:1;min-width:0;}
+.calc-ico{padding:0 16px;background:var(--pl);color:var(--p);border:2px solid var(--c3);border-radius:12px;font-size:20px;cursor:pointer;flex-shrink:0;transition:border-color .2s;}
+.calc-ico:hover{border-color:var(--p);}
+/* Calculator modal */
+.calc-wrap{background:white;border-radius:20px 20px 0 0;padding:16px;width:100%;max-width:600px;}
+.calc-disp{background:var(--c1);border-radius:12px;padding:14px 16px;margin-bottom:12px;text-align:right;}
+.calc-expr{font-size:14px;color:var(--c5);min-height:20px;word-break:break-all;}
+.calc-val{font-size:32px;font-weight:700;color:var(--c9);}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.ck{padding:16px 4px;border:none;border-radius:12px;font-size:18px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s;}
+.ck:active{opacity:.7;}
+.ck-num{background:var(--c2);color:var(--c9);}
+.ck-op{background:#EEF2FF;color:var(--p);}
+.ck-eq{background:var(--p);color:white;grid-column:span 2;}
+.ck-del{background:#FEE2E2;color:var(--r);}
+.ck-clr{background:var(--c3);color:var(--c7);}
+/* Payment method */
+.pay-grid{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.pb{padding:7px 12px;border:2px solid var(--c3);border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;background:white;color:var(--c7);transition:all .15s;font-family:inherit;white-space:nowrap;}
+.pb.on{border-color:var(--p);background:var(--pl);color:var(--p);}
+/* Spread toggle */
+.spread-box{background:var(--c1);border-radius:12px;padding:12px;margin-top:10px;}
+.spread-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.sw{position:relative;width:44px;height:24px;cursor:pointer;}
+.sw input{opacity:0;width:0;height:0;}
+.sw-sl{position:absolute;inset:0;background:var(--c3);border-radius:20px;transition:.3s;}
+.sw-sl:before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s;}
+.sw input:checked+.sw-sl{background:var(--p);}
+.sw input:checked+.sw-sl:before{transform:translateX(20px);}
+/* CC reconciliation */
+.rec-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--c2);}
+.rec-item:last-child{border-bottom:none;}
+.rec-check{width:20px;height:20px;cursor:pointer;accent-color:var(--p);}
+.rec-info{flex:1;min-width:0;}
+.rec-name{font-size:14px;font-weight:500;}
+.rec-meta{font-size:12px;color:var(--c5);}
+.rec-amt{font-size:14px;font-weight:600;flex-shrink:0;}
+.rec-done{opacity:.5;text-decoration:line-through;}
+.bill-input{display:flex;align-items:center;gap:8px;margin-top:10px;}
+.bill-input input{flex:1;border:1.5px solid var(--c3);border-radius:10px;padding:9px 12px;font-size:15px;font-family:inherit;outline:none;}
+.bill-input input:focus{border-color:var(--p);}
+.diff-ok{color:#065F46;background:#D1FAE5;padding:6px 12px;border-radius:8px;font-weight:600;font-size:14px;text-align:center;margin-top:8px;}
+.diff-ng{color:#991B1B;background:#FEE2E2;padding:6px 12px;border-radius:8px;font-weight:600;font-size:14px;text-align:center;margin-top:8px;}
+</style>
 </head>
 <body>
-<div class="container">
-    <div class="card">
-        <h2>雲端家計簿 (同步中)</h2>
-        <div id="status" class="loading">正在連線至雲端試算表...</div>
-        <div class="form-group">
-            <input type="date" id="dateInput">
-            <input type="text" id="itemInput" placeholder="品項">
-            <input type="number" id="amountInput" placeholder="金額">
-            <select id="categoryInput">
-                <option value="車相關">車相關</option><option value="出差報帳">出差報帳</option>
-                <option value="個人交際">個人交際</option><option value="生活餐飲">生活餐飲</option>
-                <option value="娛樂購物">娛樂購物</option><option value="3C類">3C類</option>
-                <option value="3C-串流">3C-串流</option>
-            </select>
-        </div>
-        <button onclick="addRecord()">同步新增至雲端</button>
-    </div>
 
-    <div class="card">
-        <h3>最近消費 (雲端數據)</h3>
-        <table id="recordTable">
-            <thead><tr><th>日期</th><th>項目</th><th>金額</th><th>分類</th></tr></thead>
-            <tbody id="recordBody"></tbody>
-        </table>
-    </div>
+<!-- SCREENS -->
+<div id="s-entry" class="screen active">
+  <div class="screen-header" style="display:flex;justify-content:space-between;align-items:center;">
+    <span>記帳 ✏️</span>
+    <button class="btng" onclick="exportAllToExcel()" style="font-size:13px;padding:6px 12px;">📊 匯出Excel</button>
+  </div>
+  <!-- Type toggle -->
+  <div class="toggle">
+    <button class="tbtn on" onclick="setEntryType('expense')">💸 支出</button>
+    <button class="tbtn" onclick="setEntryType('income')">💰 收入</button>
+    <button class="tbtn" onclick="setEntryType('fixed')">📌 固定支出</button>
+  </div>
+  <!-- Entry form -->
+  <div class="card" id="entry-form"></div>
+  <!-- Recent -->
+  <div class="card">
+    <div class="card-t">最近記錄</div>
+    <div id="recent-list"></div>
+  </div>
 </div>
 
+<div id="s-monthly" class="screen">
+  <div class="screen-header" style="display:flex;justify-content:space-between;align-items:center;">
+    <span>月報 📅</span>
+    <button class="btng" onclick="exportMonthlyToExcel()" style="font-size:13px;padding:6px 12px;">📊 匯出月報</button>
+  </div>
+  <div class="mnav">
+    <button class="mnb" onclick="changeMonth(-1)">‹</button>
+    <div style="text-align:center;line-height:1.4;">
+      <select class="yr-sel" id="yr-sel-m" onchange="setReportYear(+this.value)"></select>
+      <span class="mdt" id="month-display"></span>
+    </div>
+    <button class="mnb" onclick="changeMonth(1)">›</button>
+  </div>
+  <div id="monthly-content"></div>
+</div>
+
+<div id="s-quarterly" class="screen">
+  <div class="screen-header" style="display:flex;justify-content:space-between;align-items:center;">
+    <span>季報 📊</span>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <select class="yr-sel" id="yr-sel-q" onchange="setReportYear(+this.value)" style="font-size:14px;"></select>
+      <button class="btng" onclick="exportQuarterlyToExcel()" style="font-size:13px;padding:6px 12px;">📊 匯出季報</button>
+    </div>
+  </div>
+  <div class="qsel" id="q-sel">
+    <button class="qbtn on" onclick="setQ(1)">Q1<br><small>1-3月</small></button>
+    <button class="qbtn" onclick="setQ(2)">Q2<br><small>4-6月</small></button>
+    <button class="qbtn" onclick="setQ(3)">Q3<br><small>7-9月</small></button>
+    <button class="qbtn" onclick="setQ(4)">Q4<br><small>10-12月</small></button>
+  </div>
+  <div id="quarterly-content"></div>
+</div>
+
+<div id="s-annual" class="screen">
+  <div class="screen-header">年報 🗓</div>
+  <div id="annual-content"></div>
+</div>
+
+<div id="s-settings" class="screen">
+  <div class="screen-header">設定 ⚙️</div>
+  <div id="settings-content"></div>
+</div>
+
+<div id="s-big" class="screen">
+  <div class="screen-header">大筆支出收入 💰</div>
+  <div id="big-content"></div>
+</div>
+
+<div id="s-creditcard" class="screen">
+  <div class="screen-header">信用卡對帳 💳</div>
+  <div id="cc-filter" class="ym-filter">
+    <label>年份</label>
+    <select id="cc-yr" onchange="setCCYear(+this.value)"></select>
+    <label>月份</label>
+    <select id="cc-mo" onchange="setCCMonth(+this.value)">
+      <option value="0">全部月份</option>
+      ${Array.from({length:12},(_,i)=>`<option value="${i+1}">${i+1}月</option>`).join('')}
+    </select>
+  </div>
+  <p style="font-size:13px;color:var(--c5);margin-bottom:12px;">記錄每月各張信用卡的繳費金額，並勾選已繳費。</p>
+  <div id="cc-content"></div>
+</div>
+
+<!-- Google Drive floating save button -->
+<button id="gdrive-save-btn" onclick="gSaveData()" style="display:flex;position:fixed;bottom:76px;right:16px;z-index:999;background:#10B981;color:white;border:none;border-radius:50px;padding:10px 20px;font-size:14px;font-weight:700;box-shadow:0 3px 14px rgba(16,185,129,0.45);align-items:center;gap:6px;cursor:pointer;letter-spacing:.5px;">💾 存檔</button>
+
+<!-- Bottom Nav -->
+<nav class="bnav">
+  <button class="ni on" onclick="showScreen('entry')" id="ni-entry"><span class="ic">✏️</span>記帳</button>
+  <button class="ni" onclick="showScreen('monthly')" id="ni-monthly"><span class="ic">📅</span>月報</button>
+  <button class="ni" onclick="showScreen('quarterly')" id="ni-quarterly"><span class="ic">📊</span>季報</button>
+  <button class="ni" onclick="showScreen('big')" id="ni-big"><span class="ic">💰</span>大筆</button>
+  <button class="ni" onclick="showScreen('creditcard')" id="ni-creditcard"><span class="ic">💳</span>對帳</button>
+  <button class="ni" onclick="showScreen('settings')" id="ni-settings"><span class="ic">⚙️</span>設定</button>
+</nav>
+
+<!-- Calculator overlay -->
+<div class="ov" id="calc-modal" onclick="closeCalcModal(event)">
+  <div class="calc-wrap">
+    <div class="calc-disp">
+      <div class="calc-expr" id="calc-expr">0</div>
+      <div class="calc-val" id="calc-val">0</div>
+    </div>
+    <div class="calc-grid">
+      <button class="ck ck-clr" onclick="calcKey('C')">C</button>
+      <button class="ck ck-del" onclick="calcKey('⌫')">⌫</button>
+      <button class="ck ck-op"  onclick="calcKey('%')">%</button>
+      <button class="ck ck-op"  onclick="calcKey('÷')">÷</button>
+      <button class="ck ck-num" onclick="calcKey('7')">7</button>
+      <button class="ck ck-num" onclick="calcKey('8')">8</button>
+      <button class="ck ck-num" onclick="calcKey('9')">9</button>
+      <button class="ck ck-op"  onclick="calcKey('×')">×</button>
+      <button class="ck ck-num" onclick="calcKey('4')">4</button>
+      <button class="ck ck-num" onclick="calcKey('5')">5</button>
+      <button class="ck ck-num" onclick="calcKey('6')">6</button>
+      <button class="ck ck-op"  onclick="calcKey('-')">−</button>
+      <button class="ck ck-num" onclick="calcKey('1')">1</button>
+      <button class="ck ck-num" onclick="calcKey('2')">2</button>
+      <button class="ck ck-num" onclick="calcKey('3')">3</button>
+      <button class="ck ck-op"  onclick="calcKey('+')">+</button>
+      <button class="ck ck-num" onclick="calcKey('00')">00</button>
+      <button class="ck ck-num" onclick="calcKey('0')">0</button>
+      <button class="ck ck-eq"  onclick="calcConfirm()">確認</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal overlay -->
+<div class="ov" id="modal" onclick="closeModal(event)">
+  <div class="ms" id="modal-sheet"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
-    // ⚠️ 請在此處貼上您的 Google Apps Script 網址
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby0DVBfxq5Ty1nuJMKIBmqTDR1bVdsyHpvQi7grTI7sXeUY_tw530uFUexrc9GIAHa7/exec";
+// ============================================================
+// DATA
+// ============================================================
+const LS_TXN = 'apple_txn';
+const LS_INC = 'apple_inc';
+const LS_SET = 'apple_set';
 
-    // 設定今天日期（本地時區，避免跨裝置誤差）
-    const today = new Date();
-    const dateStr = today.getFullYear() + '-' +
-        String(today.getMonth() + 1).padStart(2, '0') + '-' +
-        String(today.getDate()).padStart(2, '0');
-    document.getElementById('dateInput').value = dateStr;
-    let records = [];
+const CATS = [
+  {id:'food',   label:'飲食',   em:'🍜'},
+  {id:'house',  label:'生活用品',em:'🏠'},
+  {id:'dress',  label:'治裝保養',em:'👗'},
+  {id:'med',    label:'醫療相關',em:'🏥'},
+  {id:'car',    label:'車子相關',em:'🚗'},
+  {id:'fun',    label:'娛樂聚餐',em:'🎉'},
+  {id:'edu',    label:'進修學習',em:'📚'},
+  {id:'gift',   label:'送禮',   em:'🎁'},
+  {id:'donate', label:'贈與',   em:'💝'},
+  {id:'other',  label:'其他',   em:'📦'},
+];
+const CAT_MAP = Object.fromEntries(CATS.map(c=>[c.id,c]));
 
-    async function fetchRecords() {
-        document.getElementById('status').innerText = "讀取雲端資料中...";
-        try {
-            const response = await fetch(SCRIPT_URL);
-            records = await response.json();
-            renderTable();
-            document.getElementById('status').innerText = "雲端同步已就緒";
-        } catch (e) {
-            document.getElementById('status').innerText = "讀取失敗，請檢查網址";
+const SUB_EDU = ['果兒','平仔','家長','共同'];
+
+const PAYMENT_METHODS = [
+  {id:'cash',       label:'現金或轉帳',      em:'💵'},
+  {id:'lp',         label:'LinePay儲值',    em:'📱'},
+  {id:'rian_cube',  label:'Rian國泰CUBE',   em:'💳'},
+  {id:'jack_cube',  label:'Jack國泰',       em:'💳'},
+  {id:'rian_fubon', label:'Rian富邦好市多', em:'💳'},
+  {id:'jack_hsbc',  label:'Jack匯豐卡',     em:'💳'},
+  {id:'jack_union', label:'Jack聯邦卡',     em:'💳'},
+];
+const CC_METHODS = ['rian_cube','jack_cube','rian_fubon','jack_hsbc','jack_union']; // 信用卡類（需對帳）
+
+const INC_SRCS = ['Jack工作','配息','我薪資','賣東西','紅包','其他收入'];
+
+const MONTHS_TW = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+
+function getTxns(){ try{return JSON.parse(localStorage.getItem(LS_TXN)||'[]');}catch{return[];} }
+function saveTxns(a){ localStorage.setItem(LS_TXN,JSON.stringify(a)); }
+function getIncs(){ try{return JSON.parse(localStorage.getItem(LS_INC)||'[]');}catch{return[];} }
+function saveIncs(a){ localStorage.setItem(LS_INC,JSON.stringify(a)); }
+function getSettings(){
+  const def = {
+    year: new Date().getFullYear(),
+    fixedExpenses:[
+      {id:'fe1',name:'房貸利息',amount:26477,type:'必要支出',freq:'monthly',note:'每月'},
+      {id:'fe2',name:'管理費',amount:6570,type:'必要支出',freq:'bimonthly-even',note:'雙月（偶數月）'},
+      {id:'fe3',name:'手機+網路',amount:2761,type:'固定支出',freq:'monthly',note:'每月'},
+    ],
+    incomeDefaults:[
+      {id:'id1',name:'Jack工作',amount:150000}
+    ]
+  };
+  try{
+    const s=JSON.parse(localStorage.getItem(LS_SET)||'null');
+    return s||def;
+  }catch{return def;}
+}
+function saveSettings(s){ localStorage.setItem(LS_SET,JSON.stringify(s)); }
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+// ============================================================
+// EXCEL CONSTANTS
+// ============================================================
+const EXCEL_FILENAME = '2026記帳.xlsx';
+const CAT_MAP_XL = {
+  food:'🍜 飲食', house:'🏠 生活用品', dress:'👗 治裝保養',
+  med:'🏥 醫療相關',  car:'🚗 車子相關',   fun:'🎉 娛樂聚餐',
+  edu:'📚 進修學習',  gift:'🎁 送禮',       donate:'💝 贈與',
+  other:'📦 其他',   fixed:'🔒 固定支出',
+};
+
+// ============================================================
+// EXCEL EXPORT — ExcelJS (styled, mirrors HTML design)
+// ============================================================
+
+// Design tokens — mirror CSS variables exactly
+const XC = {
+  INDIGO:        'FF6366F1',  // --p
+  INDIGO_LIGHT:  'FFEEF2FF',  // --pl
+  GREEN:         'FF10B981',  // --g
+  GREEN_LIGHT:   'FFD1FAE5',
+  RED:           'FFEF4444',  // --r
+  RED_LIGHT:     'FFFEE2E2',
+  AMBER:         'FFF59E0B',  // --w
+  AMBER_LIGHT:   'FFFEF3C7',
+  GRAY_BG:       'FFF3F4F6',  // --c2
+  GRAY_BG2:      'FFF9FAFB',  // --c1
+  GRAY_BORDER:   'FFE5E7EB',  // --c3
+  GRAY_TEXT:     'FF6B7280',  // --c5
+  MED_TEXT:      'FF374151',  // --c7
+  DARK:          'FF111827',  // --c9
+  WHITE:         'FFFFFFFF',
+};
+
+function _xlBorder(style='thin'){
+  const b={style,color:{argb:XC.GRAY_BORDER}};
+  return {top:b,left:b,bottom:b,right:b};
+}
+function _xlHairBorder(){
+  const b={style:'hair',color:{argb:XC.GRAY_BORDER}};
+  return {top:b,left:b,bottom:b,right:b};
+}
+
+// Apply style to a single cell
+function _xls(cell, o={}){
+  if(o.fill) cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:o.fill}};
+  cell.font={name:'Arial',size:o.size||10,bold:!!o.bold,color:{argb:o.color||XC.DARK}};
+  cell.alignment={horizontal:o.align||'left',vertical:'middle',wrapText:!!o.wrap};
+  if(o.numFmt) cell.numFmt=o.numFmt;
+  if(o.border===false) return;
+  cell.border=o.hairBorder?_xlHairBorder():_xlBorder(o.borderStyle||'thin');
+}
+
+// Merged title banner across all columns
+function _xlTitle(ws, row, text, cols, fill=XC.INDIGO){
+  ws.mergeCells(row,1,row,cols);
+  const c=ws.getCell(row,1);
+  c.value=text;
+  _xls(c,{fill,bold:true,color:XC.WHITE,size:14,align:'center',border:false});
+  ws.getRow(row).height=36;
+  return row+1;
+}
+
+// Merged section label (coloured bar)
+function _xlSection(ws, row, text, cols, fill=XC.INDIGO, textColor=XC.WHITE){
+  ws.mergeCells(row,1,row,cols);
+  const c=ws.getCell(row,1);
+  c.value=text;
+  _xls(c,{fill,bold:true,color:textColor,size:11,align:'left',border:false});
+  ws.getRow(row).height=24;
+  return row+1;
+}
+
+// Column header row
+function _xlHead(ws, row, headers, fill=XC.INDIGO_LIGHT, textColor=XC.MED_TEXT){
+  ws.getRow(row).height=20;
+  headers.forEach((h,i)=>{
+    const c=ws.getRow(row).getCell(i+1);
+    c.value=h;
+    _xls(c,{fill,bold:true,color:textColor,size:10,align:i===0?'left':'center'});
+  });
+  return row+1;
+}
+
+// Data row — alternating stripes, coloured amounts
+function _xlDataRow(ws, row, values, {alt=false,amtCols=[],amtColor=XC.RED,totalRow=false,hair=false}={}){
+  const fill=totalRow?XC.GRAY_BG:(alt?XC.GRAY_BG2:XC.WHITE);
+  ws.getRow(row).height=18;
+  values.forEach((v,i)=>{
+    const c=ws.getRow(row).getCell(i+1);
+    c.value=v;
+    const isAmt=amtCols.includes(i);
+    _xls(c,{
+      fill,bold:totalRow,
+      color:isAmt?amtColor:(totalRow?XC.DARK:XC.DARK),
+      size:10,
+      align:i===0?'left':(typeof v==='number'?'right':'center'),
+      numFmt:typeof v==='number'?'#,##0':undefined,
+      hairBorder:hair,
+    });
+  });
+  return row+1;
+}
+
+// Summary "cards" — 3 merged blocks side by side (income / expense / net)
+function _xlSummary3(ws, row, inc, exp, net, cols){
+  const third=Math.floor(cols/3);
+  // merge each third
+  ws.mergeCells(row,1,row+2,third);
+  ws.mergeCells(row,third+1,row+2,third*2);
+  ws.mergeCells(row,third*2+1,row+2,cols);
+
+  const ci=ws.getCell(row,1);
+  ci.value=`💰 收入\n${inc.toLocaleString('zh-TW')}`;
+  _xls(ci,{fill:XC.GREEN_LIGHT,bold:true,color:XC.GREEN,size:13,align:'center',wrap:true,border:false});
+
+  const ce=ws.getCell(row,third+1);
+  ce.value=`💸 支出\n${exp.toLocaleString('zh-TW')}`;
+  _xls(ce,{fill:XC.RED_LIGHT,bold:true,color:XC.RED,size:13,align:'center',wrap:true,border:false});
+
+  const cn=ws.getCell(row,third*2+1);
+  cn.value=`📊 淨值\n${net>=0?'+':''}${net.toLocaleString('zh-TW')}`;
+  _xls(cn,{fill:XC.INDIGO_LIGHT,bold:true,color:net>=0?XC.GREEN:XC.RED,size:13,align:'center',wrap:true,border:false});
+
+  ws.getRow(row).height=42;
+  return row+3;
+}
+
+// Blank spacer row
+function _xlBlank(ws, row, h=8){ ws.getRow(row).height=h; return row+1; }
+
+// Create workbook
+function _xlInit(){
+  if(!window.ExcelJS){ toast('⚠️ ExcelJS 尚未載入，請重新整理'); return null; }
+  const wb=new ExcelJS.Workbook();
+  wb.creator='蘋果家記帳'; wb.created=new Date();
+  return wb;
+}
+
+// Download the workbook as a file
+async function _xlSave(wb, filename){
+  const buf=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+// ── 匯出全部記錄 ─────────────────────────────────────────────
+async function exportAllToExcel(){
+  const wb=_xlInit(); if(!wb) return;
+  const COLS=7;
+
+  // 支出記錄 sheet
+  const ws1=wb.addWorksheet('支出記錄');
+  ws1.columns=[{width:13},{width:18},{width:13},{width:28},{width:11},{width:11},{width:15}];
+  let r=1;
+  r=_xlTitle(ws1,r,`🍎 蘋果家記帳　支出記錄　${curYear}年`,COLS);
+  r=_xlBlank(ws1,r,6);
+  r=_xlHead(ws1,r,['日期','類別','子分類','項目說明','金額','類型','支出方式']);
+  const txns=getTxns().sort((a,b)=>b.date.localeCompare(a.date));
+  txns.forEach((t,idx)=>{
+    const cat=CAT_MAP[t.cat]||{em:'📦',label:'其他'};
+    const pm=getAllPayments().find(p=>p.id===t.payment)||{label:''};
+    const isFixed=t.type==='fixed';
+    r=_xlDataRow(ws1,r,
+      [t.date,cat.em+' '+cat.label,t.sub||'',t.item||'',t.amount,
+       isFixed?'固定支出':'變動支出',pm.label],
+      {alt:idx%2===1,amtCols:[4],amtColor:isFixed?XC.AMBER:XC.RED,hair:true});
+  });
+  if(txns.length===0){
+    ws1.mergeCells(r,1,r,COLS);
+    const c=ws1.getCell(r,1);
+    c.value='（尚無支出記錄）';
+    _xls(c,{color:XC.GRAY_TEXT,align:'center',border:false});
+  }
+
+  // 收入記錄 sheet
+  const ws2=wb.addWorksheet('收入記錄');
+  ws2.columns=[{width:13},{width:28},{width:12}];
+  r=1;
+  r=_xlTitle(ws2,r,`🍎 蘋果家記帳　收入記錄　${curYear}年`,3,XC.GREEN);
+  r=_xlBlank(ws2,r,6);
+  r=_xlHead(ws2,r,['日期','來源','金額'],XC.GREEN_LIGHT,XC.MED_TEXT);
+  const incs=getIncs().sort((a,b)=>b.date.localeCompare(a.date));
+  incs.forEach((i,idx)=>{
+    r=_xlDataRow(ws2,r,[i.date,i.source||'',i.amount],
+      {alt:idx%2===1,amtCols:[2],amtColor:XC.GREEN,hair:true});
+  });
+  if(incs.length===0){
+    ws2.mergeCells(r,1,r,3);
+    const c=ws2.getCell(r,1);
+    c.value='（尚無收入記錄）';
+    _xls(c,{color:XC.GRAY_TEXT,align:'center',border:false});
+  }
+
+  await _xlSave(wb,`蘋果家記帳_全部記錄_${curYear}.xlsx`);
+  toast('✅ 已匯出 Excel！');
+}
+
+// ── 匯出月報 ─────────────────────────────────────────────────
+async function exportMonthlyToExcel(){
+  const wb=_xlInit(); if(!wb) return;
+  const d=getMonthData(curYear,curMonth);
+  const mLabel=`${curYear}年${MONTHS_TW[curMonth-1]}`;
+  const COLS=6;
+  const ws=wb.addWorksheet(mLabel);
+  ws.columns=[{width:13},{width:18},{width:15},{width:28},{width:12},{width:16}];
+  let r=1;
+
+  // 標題
+  r=_xlTitle(ws,r,`🍎 蘋果家記帳　${mLabel} 月報`,COLS);
+  r=_xlBlank(ws,r);
+
+  // 三格摘要卡
+  r=_xlSummary3(ws,r,d.totalInc,d.totalExp,d.net,COLS);
+  r=_xlBlank(ws,r);
+
+  // 詳細摘要表
+  r=_xlSection(ws,r,'📋 摘要',COLS,XC.INDIGO);
+  r=_xlHead(ws,r,['項目','金額','','','',''],XC.INDIGO_LIGHT);
+  r=_xlDataRow(ws,r,['收入',          d.totalInc,'','','',''],{amtCols:[1],amtColor:XC.GREEN});
+  r=_xlDataRow(ws,r,['固定支出',      d.totalFixed,'','','',''],{alt:true,amtCols:[1],amtColor:XC.AMBER});
+  r=_xlDataRow(ws,r,['生活支出',      d.totalVar,'','','',''],{amtCols:[1],amtColor:XC.INDIGO});
+  r=_xlDataRow(ws,r,['支出合計',      d.totalExp,'','','',''],{alt:true,amtCols:[1],amtColor:XC.RED,totalRow:true});
+  r=_xlDataRow(ws,r,['淨值',          d.net,'','','',''],
+    {amtCols:[1],amtColor:d.net>=0?XC.GREEN:XC.RED,totalRow:true});
+  r=_xlBlank(ws,r);
+
+  // 🔒 固定支出
+  if(d.fixedList.length+d.extraFixed.length>0){
+    r=_xlSection(ws,r,'🔒 固定支出',COLS,XC.AMBER,XC.WHITE);
+    r=_xlHead(ws,r,['名稱','金額','類型','','',''],XC.AMBER_LIGHT,XC.MED_TEXT);
+    [...d.fixedList.map(fe=>[fe.name,fe.actualAmount,fe.type,'','','']),
+     ...d.extraFixed.map(t=>[t.item,t.amount,'臨時固定支出','','',''])]
+      .forEach((row,idx)=>{ r=_xlDataRow(ws,r,row,{alt:idx%2===1,amtCols:[1],amtColor:XC.AMBER,hair:true}); });
+    r=_xlBlank(ws,r);
+  }
+
+  // 📊 生活支出分類
+  const catRows=CATS.filter(c=>d.catTotals[c.id]>0)
+    .sort((a,b)=>d.catTotals[b.id]-d.catTotals[a.id]);
+  if(catRows.length>0){
+    const varTotal=d.totalVar||1;
+    r=_xlSection(ws,r,`📊 生活支出分類　合計：${d.totalVar.toLocaleString('zh-TW')}`,COLS);
+    r=_xlHead(ws,r,['類別','金額','佔比','','','']);
+    catRows.forEach((c,idx)=>{
+      const pct=Math.round(d.catTotals[c.id]/varTotal*100);
+      r=_xlDataRow(ws,r,[c.em+' '+c.label,d.catTotals[c.id],pct+'%','','',''],
+        {alt:idx%2===1,amtCols:[1],amtColor:XC.INDIGO,hair:true});
+    });
+    r=_xlBlank(ws,r);
+  }
+
+  // 💰 收入明細
+  if(d.incs.length>0){
+    r=_xlSection(ws,r,'💰 收入明細',COLS,XC.GREEN);
+    r=_xlHead(ws,r,['日期','來源','金額','','',''],XC.GREEN_LIGHT,XC.MED_TEXT);
+    d.incs.forEach((i,idx)=>{
+      r=_xlDataRow(ws,r,[i.date,i.source||'',i.amount,'','',''],
+        {alt:idx%2===1,amtCols:[2],amtColor:XC.GREEN,hair:true});
+    });
+    r=_xlBlank(ws,r);
+  }
+
+  // 📋 支出明細
+  const sortedVar=[...d.varTxns].sort((a,b)=>b.date.localeCompare(a.date));
+  if(sortedVar.length>0){
+    r=_xlSection(ws,r,`📋 支出明細　${sortedVar.length} 筆`,COLS);
+    r=_xlHead(ws,r,['日期','類別','子分類','項目','金額','支出方式']);
+    sortedVar.forEach((t,idx)=>{
+      const cat=CAT_MAP[t.cat]||{em:'📦',label:'其他'};
+      const pm=getAllPayments().find(p=>p.id===t.payment)||{label:''};
+      r=_xlDataRow(ws,r,[t.date,cat.em+' '+cat.label,t.sub||'',t.item||'',t.amount,pm.label],
+        {alt:idx%2===1,amtCols:[4],amtColor:XC.RED,hair:true});
+    });
+  }
+
+  await _xlSave(wb,`蘋果家記帳_${curYear}年${String(curMonth).padStart(2,'0')}月.xlsx`);
+  toast('✅ 已匯出月報！');
+}
+
+// ── 匯出季報 ─────────────────────────────────────────────────
+async function exportQuarterlyToExcel(){
+  const wb=_xlInit(); if(!wb) return;
+  const months=[1,2,3].map(i=>(curQ-1)*3+i);
+  const data=months.map(m=>getMonthData(curYear,m));
+  const totInc=data.reduce((s,d)=>s+d.totalInc,0);
+  const totExp=data.reduce((s,d)=>s+d.totalExp,0);
+  const totNet=totInc-totExp;
+  const COLS=6;
+  const qLabel=`${curYear}年Q${curQ}`;
+  const ws=wb.addWorksheet(`Q${curQ}`);
+  ws.columns=[{width:18},{width:14},{width:14},{width:14},{width:14},{width:15}];
+  let r=1;
+
+  // 標題
+  r=_xlTitle(ws,r,`🍎 蘋果家記帳　${qLabel} 季報`,COLS);
+  r=_xlBlank(ws,r);
+
+  // 三格摘要卡
+  r=_xlSummary3(ws,r,totInc,totExp,totNet,COLS);
+  r=_xlBlank(ws,r);
+
+  // 📅 月份比較
+  r=_xlSection(ws,r,'📅 月份比較',COLS);
+  r=_xlHead(ws,r,['項目',months[0]+'月',months[1]+'月',months[2]+'月','小計','']);
+  const amtM=[1,2,3,4];
+  r=_xlDataRow(ws,r,['收入',...data.map(d=>d.totalInc),totInc,''],
+    {amtCols:amtM,amtColor:XC.GREEN});
+  r=_xlDataRow(ws,r,['固定支出',...data.map(d=>d.totalFixed),data.reduce((s,d)=>s+d.totalFixed,0),''],
+    {alt:true,amtCols:amtM,amtColor:XC.AMBER});
+  r=_xlDataRow(ws,r,['生活支出',...data.map(d=>d.totalVar),data.reduce((s,d)=>s+d.totalVar,0),''],
+    {amtCols:amtM,amtColor:XC.INDIGO});
+  r=_xlDataRow(ws,r,['支出合計',...data.map(d=>d.totalExp),totExp,''],
+    {alt:true,amtCols:amtM,amtColor:XC.RED,totalRow:true});
+  r=_xlDataRow(ws,r,['淨值',...data.map(d=>d.net),totNet,''],
+    {amtCols:amtM,amtColor:totNet>=0?XC.GREEN:XC.RED,totalRow:true});
+  r=_xlBlank(ws,r);
+
+  // 📊 支出分類
+  const catQ={};
+  for(const c of CATS) catQ[c.id]=data.reduce((s,d)=>s+d.catTotals[c.id],0);
+  const catRowsQ=CATS.filter(c=>catQ[c.id]>0).sort((a,b)=>catQ[b.id]-catQ[a.id]);
+  if(catRowsQ.length>0){
+    const totCat=catRowsQ.reduce((s,c)=>s+catQ[c.id],0)||1;
+    r=_xlSection(ws,r,`📊 Q${curQ} 支出分類`,COLS);
+    r=_xlHead(ws,r,['類別','金額','佔比','','','']);
+    catRowsQ.forEach((c,idx)=>{
+      const pct=Math.round(catQ[c.id]/totCat*100);
+      r=_xlDataRow(ws,r,[c.em+' '+c.label,catQ[c.id],pct+'%','','',''],
+        {alt:idx%2===1,amtCols:[1],amtColor:XC.INDIGO,hair:true});
+    });
+    r=_xlBlank(ws,r);
+  }
+
+  // 📚 教育費
+  const eduQ={};
+  for(const d of data)
+    for(const t of d.varTxns.filter(x=>x.cat==='edu'))
+      eduQ[t.sub||'其他']=(eduQ[t.sub||'其他']||0)+t.amount;
+  if(Object.keys(eduQ).length>0){
+    r=_xlSection(ws,r,`📚 Q${curQ} 教育費`,COLS,XC.AMBER);
+    r=_xlHead(ws,r,['對象','金額','','','',''],XC.AMBER_LIGHT,XC.MED_TEXT);
+    Object.entries(eduQ).sort((a,b)=>b[1]-a[1]).forEach(([k,v],idx)=>{
+      r=_xlDataRow(ws,r,[k,v,'','','',''],{alt:idx%2===1,amtCols:[1],amtColor:XC.AMBER,hair:true});
+    });
+    r=_xlBlank(ws,r);
+  }
+
+  // 📋 支出明細
+  const allTxns=data.flatMap(d=>d.varTxns).sort((a,b)=>b.date.localeCompare(a.date));
+  if(allTxns.length>0){
+    r=_xlSection(ws,r,`📋 支出明細　${allTxns.length} 筆`,COLS);
+    r=_xlHead(ws,r,['日期','類別','子分類','項目','金額','支出方式']);
+    allTxns.forEach((t,idx)=>{
+      const cat=CAT_MAP[t.cat]||{em:'📦',label:'其他'};
+      const pm=getAllPayments().find(p=>p.id===t.payment)||{label:''};
+      r=_xlDataRow(ws,r,[t.date,cat.em+' '+cat.label,t.sub||'',t.item||'',t.amount,pm.label],
+        {alt:idx%2===1,amtCols:[4],amtColor:XC.RED,hair:true});
+    });
+  }
+
+  await _xlSave(wb,`蘋果家記帳_${qLabel}.xlsx`);
+  toast('✅ 已匯出季報！');
+}
+
+// ============================================================
+// GOOGLE DRIVE SYNC
+// ============================================================
+const GDRIVE_FILE_NAME = 'apple_budget_data.json';
+const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const LS_GDRIVE_CID = 'apple_gdrive_cid';
+
+let gToken = null;
+let gFileId = null;
+let gTokenClient = null;
+let gSyncStatus = 'unlinked'; // unlinked | linked | syncing | error
+
+function getGClientId(){ return localStorage.getItem(LS_GDRIVE_CID)||''; }
+function saveGClientId(v){ localStorage.setItem(LS_GDRIVE_CID, v.trim()); }
+
+function initGDrive(){
+  const cid = getGClientId();
+  if(!cid || !window.google?.accounts?.oauth2) return;
+  try{
+    gTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: cid,
+      scope: GDRIVE_SCOPE,
+      callback: async (resp) => {
+        if(resp.error){ gSyncStatus='error'; updateSyncBadge(); toast('⚠️ 登入失敗：'+resp.error); return; }
+        gToken = resp.access_token;
+        gSyncStatus = 'linked'; updateSyncBadge(); updateSaveBtnVisibility();
+        await gLoadData();
+      }
+    });
+  }catch(e){ console.warn('initGDrive',e); }
+}
+
+async function gSignIn(){
+  const cid = getGClientId();
+  if(!cid){ toast('請先在設定中填入 Google Client ID'); return; }
+  if(!window.google?.accounts?.oauth2){ toast('⚠️ Google 服務載入中，請稍後再試'); return; }
+  if(!gTokenClient) initGDrive();
+  if(!gTokenClient){ toast('⚠️ 初始化失敗，請確認 Client ID 正確'); return; }
+  gTokenClient.requestAccessToken();
+}
+
+function gSignOut(){
+  if(gToken) try{ google.accounts.oauth2.revoke(gToken, ()=>{}); }catch(e){}
+  gToken = null; gFileId = null; gSyncStatus = 'unlinked';
+  updateSyncBadge(); updateSaveBtnVisibility();
+  if(curScreen==='settings') renderSettings();
+  toast('已登出 Google');
+}
+
+async function gFindFile(){
+  const name = encodeURIComponent(`name='${GDRIVE_FILE_NAME}'`);
+  const resp = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=name%3D%27${GDRIVE_FILE_NAME}%27+and+trashed%3Dfalse&spaces=drive&fields=files(id,name)`,
+    { headers: { Authorization: `Bearer ${gToken}` } }
+  );
+  if(!resp.ok) throw new Error('gFindFile '+resp.status);
+  const data = await resp.json();
+  return (data.files && data.files.length>0) ? data.files[0].id : null;
+}
+
+async function gLoadData(){
+  if(!gToken) return;
+  gSyncStatus = 'syncing'; updateSyncBadge();
+  try{
+    const fileId = await gFindFile();
+    if(!fileId){
+      gSyncStatus = 'linked'; updateSyncBadge();
+      toast('☁️ 雲端尚無資料，記帳後請按「存檔」建立');
+      if(curScreen==='settings') renderSettings();
+      return;
+    }
+    gFileId = fileId;
+    const resp = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      { headers: { Authorization: `Bearer ${gToken}` } }
+    );
+    if(!resp.ok) throw new Error('gLoadData '+resp.status);
+    const data = await resp.json();
+    if(data.txns) saveTxnsRaw(data.txns);
+    if(data.incs) saveIncsRaw(data.incs);
+    if(data.settings) saveSettingsRaw(data.settings);
+    if(data.bills) saveBillsRaw(data.bills);
+    gSyncStatus = 'linked'; updateSyncBadge();
+    toast('✅ 已從 Google Drive 載入最新資料');
+    renderCurrentScreen();
+    if(curScreen==='settings') renderSettings();
+  }catch(e){
+    console.warn('gLoadData',e);
+    gSyncStatus = 'error'; updateSyncBadge();
+    toast('⚠️ 載入失敗，請重試');
+  }
+}
+
+async function gSaveData(){
+  if(!gToken){ toast('請先登入 Google'); return; }
+  gSyncStatus = 'syncing'; updateSyncBadge();
+  try{
+    const payload = {
+      txns: getTxns(), incs: getIncs(),
+      settings: getSettings(), bills: getBills(),
+      synced: new Date().toISOString()
+    };
+    const body = JSON.stringify(payload, null, 2);
+    if(!gFileId) gFileId = await gFindFile();
+    if(gFileId){
+      const r = await fetch(
+        `https://www.googleapis.com/upload/drive/v3/files/${gFileId}?uploadType=media`,
+        { method:'PATCH', headers:{ Authorization:`Bearer ${gToken}`, 'Content-Type':'application/json' }, body }
+      );
+      if(!r.ok) throw new Error('gSaveData PATCH '+r.status);
+    } else {
+      const meta = { name: GDRIVE_FILE_NAME, mimeType:'application/json' };
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(meta)], { type:'application/json' }));
+      form.append('file',     new Blob([body],               { type:'application/json' }));
+      const r = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+        { method:'POST', headers:{ Authorization:`Bearer ${gToken}` }, body:form }
+      );
+      if(!r.ok) throw new Error('gSaveData POST '+r.status);
+      const created = await r.json();
+      gFileId = created.id;
+    }
+    gSyncStatus = 'linked'; updateSyncBadge();
+    toast('✅ 已存檔到 Google Drive');
+  }catch(e){
+    console.warn('gSaveData',e);
+    gSyncStatus = 'error'; updateSyncBadge();
+    toast('⚠️ 存檔失敗，請重試');
+  }
+}
+
+function updateSyncBadge(){
+  const el = document.getElementById('sync-badge');
+  if(!el) return;
+  const map = { unlinked:'🔌 未登入', linked:'✅ 已同步', syncing:'🔄 同步中…', error:'⚠️ 失敗' };
+  el.textContent = map[gSyncStatus]||'🔌 未登入';
+}
+
+function updateSaveBtnVisibility(){
+  // Button is always visible; color indicates login state
+  const btn = document.getElementById('gdrive-save-btn');
+  if(btn) btn.style.background = gToken ? '#10B981' : '#9CA3AF';
+}
+
+function saveGClientIdFromInput(){
+  const val = (document.getElementById('gdrive-cid-input')||{}).value||'';
+  if(!val.trim()){ toast('請填入 Client ID'); return; }
+  saveGClientId(val);
+  initGDrive();
+  renderSettings();
+  toast('✅ Client ID 已儲存，請點「登入 Google」');
+}
+
+function clearGClientId(){
+  gSignOut();
+  localStorage.removeItem(LS_GDRIVE_CID);
+  gTokenClient = null;
+  renderSettings();
+}
+
+function renderCurrentScreen(){
+  if(curScreen==='entry') renderEntryForm();
+  else if(curScreen==='monthly') renderMonthly();
+  else if(curScreen==='quarterly') renderQuarterly();
+  else if(curScreen==='big') renderBig();
+  else if(curScreen==='creditcard') renderCCPage();
+}
+
+// Raw save helpers (don't re-trigger sync)
+function saveTxnsRaw(a){ localStorage.setItem(LS_TXN,JSON.stringify(a)); }
+function saveIncsRaw(a){ localStorage.setItem(LS_INC,JSON.stringify(a)); }
+function saveSettingsRaw(s){ localStorage.setItem(LS_SET,JSON.stringify(s)); }
+function saveBillsRaw(b){ localStorage.setItem(LS_BILLS,JSON.stringify(b)); }
+
+// ============================================================
+// STATE
+// ============================================================
+let curScreen='entry';
+let entryType='expense';
+let selCat='food';
+let selSub='共同';
+let curYear=new Date().getFullYear();
+let curMonth=new Date().getMonth()+1; // 1-12
+let selPayment='cash';
+let eduSpread=false;
+let eduStartYM=null; // "YYYY-MM"
+let eduEndYM=null;   // "YYYY-MM"
+
+// ── Calculator state ──
+let calcExpr='';
+let calcConfirmCb=null;
+
+function calcKey(k){
+  const ops=['+','-','×','÷','%'];
+  if(k==='C'){ calcExpr=''; }
+  else if(k==='⌫'){ calcExpr=calcExpr.slice(0,-1); }
+  else if(k==='='){ calcEval(); return; }
+  else {
+    // prevent double operator
+    const lastCh=calcExpr.slice(-1);
+    if(ops.includes(k)&&ops.includes(lastCh)) calcExpr=calcExpr.slice(0,-1);
+    // prevent leading operator (except minus for negative)
+    if(ops.includes(k)&&calcExpr==='') return;
+    calcExpr+=k;
+  }
+  updateCalcDisplay();
+}
+function calcEval(){
+  if(!calcExpr) return;
+  try{
+    const safe=calcExpr.replace(/×/g,'*').replace(/÷/g,'/').replace(/%/g,'*0.01');
+    const r=Function('"use strict";return ('+safe+')')();
+    calcExpr=String(Math.round(r*100)/100);
+  }catch(e){ calcExpr=''; }
+  updateCalcDisplay();
+}
+function updateCalcDisplay(){
+  const exEl=document.getElementById('calc-expr');
+  const vaEl=document.getElementById('calc-val');
+  if(!exEl) return;
+  exEl.textContent=calcExpr||'0';
+  // show formatted current number portion
+  const lastNum=calcExpr.split(/[+\-×÷]/).pop();
+  const n=parseFloat(lastNum);
+  vaEl.textContent=(!isNaN(n)&&lastNum!=='')?n.toLocaleString('zh-TW'):'0';
+}
+function openCalc(cb){
+  calcConfirmCb=cb;
+  calcExpr='';
+  updateCalcDisplay();
+  document.getElementById('calc-modal').classList.add('show');
+}
+function closeCalcModal(e){
+  if(!e||e.target===document.getElementById('calc-modal'))
+    document.getElementById('calc-modal').classList.remove('show');
+}
+function calcConfirm(){
+  calcEval();
+  const n=parseFloat(calcExpr);
+  if(isNaN(n)||n<=0){ toast('請輸入金額'); return; }
+  document.getElementById('calc-modal').classList.remove('show');
+  if(calcConfirmCb) calcConfirmCb(n);
+}
+let curQ=Math.ceil(curMonth/3);
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showScreen(s){
+  curScreen=s;
+  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+  document.getElementById('s-'+s).classList.add('active');
+  document.querySelectorAll('.ni').forEach(el=>el.classList.remove('on'));
+  document.getElementById('ni-'+s).classList.add('on');
+  if(s==='monthly') renderMonthly();
+  if(s==='quarterly') renderQuarterly();
+  if(s==='annual') renderAnnual();
+  if(s==='creditcard') renderCCPage();
+  if(s==='settings') renderSettings();
+  if(s==='big') renderBigItems();
+}
+
+// ============================================================
+// ENTRY FORM
+// ============================================================
+function setEntryType(t){
+  entryType=t;
+  document.querySelectorAll('.tbtn').forEach((b,i)=>{
+    b.classList.toggle('on',['expense','income','fixed'][i]===t);
+  });
+  renderEntryForm();
+  renderRecent();
+}
+
+function getAmt(){
+  const el=document.getElementById('inp-amt'); if(!el) return 0;
+  return parseFloat((el.dataset.raw||el.value).replace(/,/g,''))||0;
+}
+function spreadMonthCount(startYM,endYM){
+  if(!startYM||!endYM||endYM<startYM) return 0;
+  const [sy,sm]=startYM.split('-').map(Number);
+  const [ey,em]=endYM.split('-').map(Number);
+  return (ey-sy)*12+(em-sm)+1;
+}
+function setAmt(n){
+  const el=document.getElementById('inp-amt'); if(!el) return;
+  el.dataset.raw=String(n);
+  el.value=n>0?n.toLocaleString('zh-TW'):'';
+  el.focus();
+}
+function amtInput(el){
+  // allow digits, dot, and math operators while typing
+  const raw=el.value.replace(/[^0-9.+\-*\/]/g,'');
+  el.dataset.raw=raw;
+  el.value=raw;
+}
+function amtEval(el){
+  const raw=(el.dataset.raw||el.value).trim();
+  if(!raw) return;
+  // only evaluate if expression contains operators
+  if(/[+\-*\/]/.test(raw)){
+    try{
+      // safe eval: only allow numbers and operators
+      const sanitized=raw.replace(/[^0-9.+\-*\/]/g,'');
+      // eslint-disable-next-line no-new-func
+      const result=Function('"use strict";return ('+sanitized+')')();
+      const n=Math.round(parseFloat(result)*100)/100;
+      if(!isNaN(n)&&n>0){
+        el.value=n.toLocaleString('zh-TW');
+        el.dataset.raw=String(n);
+      }
+    } catch(e){ /* invalid expression, ignore */ }
+  }
+}
+function amtBlur(el){
+  amtEval(el);
+  const n=parseFloat((el.dataset.raw||el.value).replace(/,/g,''));
+  if(!isNaN(n)&&n>0){ el.value=n.toLocaleString('zh-TW'); el.dataset.raw=String(n); }
+  else { el.value=''; el.dataset.raw=''; }
+}
+function amtFocus(el){
+  // show raw number when focused so user can edit easily
+  const raw=el.dataset.raw||'';
+  el.value=raw;
+}
+function getAllPayments(){
+  const custom=(getSettings().customPayments||[]);
+  return [...PAYMENT_METHODS,...custom];
+}
+function renderPayGrid(){
+  const methods=getAllPayments();
+  return `<div class="pay-grid">${methods.map(p=>
+    `<button class="pb${p.id===selPayment?' on':''}" onclick="selPay('${p.id}')">${p.em} ${p.label}</button>`
+  ).join('')}</div>`;
+}
+function selPay(id){
+  selPayment=id;
+  document.querySelectorAll('.pb').forEach(b=>{
+    const oc=b.getAttribute('onclick')||'';
+    b.classList.toggle('on',oc.includes(`'${id}'`));
+  });
+}
+function addPaymentMethod(){
+  openModal(`<div class="mt">新增支付方式</div>
+    <div class="fg"><label class="fl">名稱</label><input class="fi" id="m-pm-name" placeholder="例：街口支付"></div>
+    <div class="fg"><label class="fl">圖示（emoji）</label><input class="fi" id="m-pm-em" placeholder="💰" maxlength="2"></div>
+    <button class="btn1" onclick="confirmAddPayment()">新增</button>`);
+}
+function confirmAddPayment(){
+  const name=document.getElementById('m-pm-name').value.trim();
+  if(!name){ toast('請輸入名稱'); return; }
+  const em=document.getElementById('m-pm-em').value.trim()||'💳';
+  const s=getSettings();
+  if(!s.customPayments) s.customPayments=[];
+  const id='cp_'+uid();
+  s.customPayments.push({id,label:name,em});
+  saveSettings(s);
+  selPayment=id;
+  closeModal();
+  renderEntryForm();
+  toast(`✓ 已新增「${name}」`);
+}
+
+function renderEntryForm(){
+  const f=document.getElementById('entry-form');
+  const amtField=`<div class="amt-wrap">
+    <input class="fi big" id="inp-amt" type="text" inputmode="decimal" placeholder="0"
+      oninput="amtInput(this)" onblur="amtBlur(this)" onfocus="amtFocus(this)"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();amtEval(this);}">
+    <button class="calc-ico" onclick="openCalc(n=>setAmt(n))" tabindex="-1" title="計算機">🖩</button>
+  </div>`;
+  if(entryType==='expense'){
+    f.innerHTML=`
+      <div class="fg"><label class="fl">金額（元）</label>${amtField}</div>
+      <div class="fg"><label class="fl">類別</label>
+        <div class="cg" id="cat-grid">${CATS.map(c=>`
+          <button class="cb${c.id===selCat?' on':''}" onclick="selCategory('${c.id}')">
+            <span class="em">${c.em}</span>${c.label}
+          </button>`).join('')}</div>
+        <div id="sub-area"></div>
+      </div>
+      <div class="fg"><label class="fl">支出方式</label>${renderPayGrid()}</div>
+      <div class="fg"><label class="fl">項目說明</label>
+        <input class="fi" id="inp-item" type="text" placeholder="例：全聯食材、平仔數學課"></div>
+      <div class="fg"><label class="fl">日期</label>
+        <input class="fi" id="inp-date" type="date" value="${todayStr()}"></div>
+      <button class="btn1" onclick="submitEntry()">✓ 新增支出</button>`;
+    renderSubArea();
+  } else if(entryType==='income'){
+    f.innerHTML=`
+      <div class="fg"><label class="fl">金額（元）</label>${amtField}</div>
+      <div class="fg"><label class="fl">收入來源</label>
+        <select class="fi" id="inp-src">
+          ${INC_SRCS.map(s=>`<option value="${s}">${s}</option>`).join('')}
+        </select></div>
+      <div class="fg"><label class="fl">日期</label>
+        <input class="fi" id="inp-date" type="date" value="${todayStr()}"></div>
+      <button class="btn1" onclick="submitEntry()">✓ 新增收入</button>`;
+  } else {
+    // Fixed expense override
+    const s=getSettings();
+    f.innerHTML=`
+      <p style="font-size:13px;color:var(--c5);margin-bottom:12px;">固定支出預設由設定自動計算，這裡可記錄<b>當月特殊金額</b>（如水電費實際帳單）</p>
+      <div class="fg"><label class="fl">固定支出項目</label>
+        <select class="fi" id="inp-fe">
+          ${s.fixedExpenses.map(fe=>`<option value="${fe.id}">${fe.name}（預設 ${fmt(fe.amount)}）</option>`).join('')}
+          <option value="new">＋ 新增其他固定項目</option>
+        </select></div>
+      <div class="fg"><label class="fl">實際金額（元）</label>${amtField}</div>
+      <div class="fg"><label class="fl">支出方式</label>${renderPayGrid()}</div>
+      <div class="fg"><label class="fl">月份</label>
+        <input class="fi" id="inp-date" type="month" value="${curYear}-${String(curMonth).padStart(2,'0')}"></div>
+      <button class="btn1" onclick="submitEntry()">✓ 記錄固定支出</button>`;
+  }
+  renderRecent();
+}
+
+function selCategory(id){
+  selCat=id;
+  document.querySelectorAll('.cb').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick').includes(`'${id}'`)));
+  renderSubArea();
+}
+
+function renderSubArea(){
+  const el=document.getElementById('sub-area');
+  if(!el) return;
+  if(selCat==='edu'){
+    // Build 24-month options starting from today's date (entry date field or today)
+    const entryDateEl=document.getElementById('inp-date');
+    const entryDate=entryDateEl&&entryDateEl.value?new Date(entryDateEl.value):new Date();
+    const baseY=entryDate.getFullYear(), baseM=entryDate.getMonth()+1;
+    const spreadMonths=Array.from({length:13},(_,i)=>{
+      let m=baseM+i, y=baseY;
+      while(m>12){m-=12;y++;}
+      const ym=`${y}-${String(m).padStart(2,'0')}`;
+      const lbl=y===baseY?`${m}月`:`${m}月(${y}年)`;
+      return {ym,lbl};
+    });
+    if(!eduStartYM) eduStartYM=spreadMonths[0].ym;
+    if(!eduEndYM||eduEndYM<eduStartYM) eduEndYM=eduStartYM;
+    // Generate end options independently from start (always 13 months forward from start)
+    const [esy,esm]=eduStartYM.split('-').map(Number);
+    const endOpts=Array.from({length:13},(_,i)=>{
+      let m=esm+i, y=esy;
+      while(m>12){m-=12;y++;}
+      const ym=`${y}-${String(m).padStart(2,'0')}`;
+      const lbl=y===baseY?`${m}月`:`${m}月(${y}年)`;
+      return {ym,lbl};
+    });
+    // If current eduEndYM is no longer a valid end option, reset to start
+    if(!endOpts.find(o=>o.ym===eduEndYM)) eduEndYM=eduStartYM;
+    const countM=spreadMonthCount(eduStartYM,eduEndYM);
+    const perM=eduSpread&&countM>0?Math.floor(getAmt()/countM):0;
+    el.innerHTML=`
+      <div class="scr" style="margin-top:8px;">${
+        SUB_EDU.map(s=>`<button class="sb${s===selSub?' on':''}" onclick="selSub='${s}';document.querySelectorAll('.sb').forEach(b=>b.classList.toggle('on',b.textContent==='${s}'))">${s}</button>`).join('')
+      }</div>
+      <div class="spread-box" style="margin-top:10px;">
+        <div class="spread-row">
+          <span style="font-size:14px;font-weight:500;">分攤到各月</span>
+          <label class="sw"><input type="checkbox" id="spread-toggle" ${eduSpread?'checked':''} onchange="eduSpread=this.checked;renderSubArea()"><span class="sw-sl"></span></label>
+        </div>
+        ${eduSpread?`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div>
+            <div style="font-size:12px;color:var(--c5);margin-bottom:4px;">起始月份</div>
+            <select class="fi" id="spread-start" onchange="eduStartYM=this.value;if(eduEndYM<eduStartYM)eduEndYM=eduStartYM;renderSubArea()">
+              ${spreadMonths.map(o=>`<option value="${o.ym}"${o.ym===eduStartYM?' selected':''}>${o.lbl}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--c5);margin-bottom:4px;">結束月份</div>
+            <select class="fi" id="spread-end" onchange="eduEndYM=this.value;renderSubArea()">
+              ${endOpts.map(o=>`<option value="${o.ym}"${o.ym===eduEndYM?' selected':''}>${o.lbl}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        ${getAmt()>0&&countM>0?`
+          <div style="font-size:13px;color:var(--p);font-weight:600;">
+            共 ${countM} 個月，每月 ${perM.toLocaleString('zh-TW')} 元
+            ${getAmt()-perM*(countM-1)!==perM?`（最後一月 ${(getAmt()-perM*(countM-1)).toLocaleString('zh-TW')} 元）`:''}
+          </div>`:'<div style="font-size:13px;color:var(--c5);">請先輸入金額</div>'}
+        `:''}
+      </div>`;
+  } else { el.innerHTML=''; }
+}
+
+function submitEntry(){
+  const amt=getAmt();
+  if(!amt||amt<=0){ toast('請輸入金額'); return; }
+  const date=document.getElementById('inp-date')?.value||todayStr();
+  const note='';
+
+  if(entryType==='expense'){
+    const item=document.getElementById('inp-item')?.value||'';
+    const sub=selCat==='edu'?selSub:'';
+    const txns=getTxns();
+
+    // 教育費分攤
+    const spreadCount=selCat==='edu'&&eduSpread?spreadMonthCount(eduStartYM,eduEndYM):0;
+    if(spreadCount>0){
+      const [sy,sm]=eduStartYM.split('-').map(Number);
+      const perM=Math.floor(amt/spreadCount);
+      const rem=amt-perM*(spreadCount-1);
+      const sId=uid(); // shared spreadId for the whole group
+      for(let i=0;i<spreadCount;i++){
+        let mIdx=sm+i, yIdx=sy;
+        while(mIdx>12){mIdx-=12;yIdx++;}
+        const mStr=String(mIdx).padStart(2,'0');
+        const mAmt=i===spreadCount-1?rem:perM;
+        const mDate=`${yIdx}-${mStr}-01`;
+        txns.unshift({id:uid(),date:mDate,type:'expense',cat:'edu',sub,item,
+          amount:mAmt,payment:selPayment,note,spreadId:sId,
+          spreadInfo:`第${i+1}攤/共${spreadCount}攤（總額${amt.toLocaleString('zh-TW')}）`,reconciled:false});
+      }
+      toast(`✓ 已分攤為 ${spreadCount} 筆記錄`);
+    } else {
+      txns.unshift({id:uid(),date,type:'expense',cat:selCat,sub,item,
+        amount:amt,payment:selPayment,note,reconciled:false});
+      toast('✓ 已記錄支出');
+    }
+    saveTxns(txns);
+    setAmt(0); eduSpread=false; eduStartYM=null; eduEndYM=null;
+    document.getElementById('inp-item').value='';
+
+  } else if(entryType==='income'){
+    const src=document.getElementById('inp-src')?.value||'';
+    const incs=getIncs();
+    incs.unshift({id:uid(),date,source:src,amount:amt,note});
+    saveIncs(incs);
+    toast('✓ 已記錄收入');
+    setAmt(0);
+
+  } else {
+    // Fixed expense override
+    const feId=document.getElementById('inp-fe')?.value||'';
+    const monthVal=document.getElementById('inp-date')?.value||`${curYear}-${String(curMonth).padStart(2,'0')}`;
+    const txns=getTxns();
+    const s=getSettings();
+    const fe=s.fixedExpenses.find(f=>f.id===feId);
+    txns.unshift({id:uid(),date:monthVal+'-01',type:'fixed',cat:'fixed',feId,
+      feType:fe?.type||'固定支出',item:fe?.name||'固定支出',
+      amount:amt,payment:selPayment,note,reconciled:false});
+    saveTxns(txns);
+    toast('✓ 已記錄固定支出');
+    setAmt(0);
+  }
+  renderRecent();
+}
+
+let recentFilterYear=new Date().getFullYear(), recentFilterMonth=new Date().getMonth()+1;
+
+function getAvailableYears(){
+  const yrs=new Set();
+  getTxns().forEach(t=>yrs.add(+t.date.split('-')[0]));
+  getIncs().forEach(i=>yrs.add(+i.date.split('-')[0]));
+  yrs.add(new Date().getFullYear());
+  return [...yrs].sort((a,b)=>a-b);
+}
+
+function setReportYear(y){
+  curYear=y;
+  if(curScreen==='monthly') renderMonthly();
+  if(curScreen==='quarterly') renderQuarterly();
+}
+
+function populateYearSel(elId, selectedYear){
+  const sel=document.getElementById(elId); if(!sel) return;
+  const yrs=getAvailableYears();
+  sel.innerHTML=yrs.map(y=>`<option value="${y}"${y===selectedYear?' selected':''}>${y}年</option>`).join('');
+}
+
+// ── 大筆支出收入 ─────────────────────────────────────────────
+const BIG_THRESHOLD=8000;
+let bigFilterYear=null, bigFilterType='t'; // default: 支出
+
+function renderBigItems(){
+  const el=document.getElementById('big-content'); if(!el) return;
+  const yrs=getAvailableYears();
+  const txns=getTxns().filter(t=>t.amount>=BIG_THRESHOLD);
+  const incs=getIncs().filter(i=>i.amount>=BIG_THRESHOLD);
+  const all=[...txns.map(t=>({...t,_kind:'t'})),...incs.map(i=>({...i,_kind:'i'}))]
+    .sort((a,b)=>b.amount-a.amount||b.date.localeCompare(a.date));
+
+  const yrOpts=`<option value="">全部年份</option>`+yrs.map(y=>`<option value="${y}"${bigFilterYear===y?' selected':''}>${y}年</option>`).join('');
+
+  let shown=all.filter(r=>{
+    if(bigFilterYear&&+r.date.split('-')[0]!==bigFilterYear) return false;
+    if(bigFilterType!=='all'&&r._kind!==bigFilterType) return false;
+    return true;
+  });
+
+  const totalExp=shown.filter(r=>r._kind==='t').reduce((s,r)=>s+r.amount,0);
+  const totalInc=shown.filter(r=>r._kind==='i').reduce((s,r)=>s+r.amount,0);
+
+  // Type toggle (同記帳頁樣式)
+  const togHtml=`<div class="toggle" style="margin-bottom:10px;">
+    <button class="tbtn${bigFilterType==='t'?' on':''}" onclick="bigFilterType='t';renderBigItems()">💸 支出</button>
+    <button class="tbtn${bigFilterType==='i'?' on':''}" onclick="bigFilterType='i';renderBigItems()">💰 收入</button>
+    <button class="tbtn${bigFilterType==='all'?' on':''}" onclick="bigFilterType='all';renderBigItems()">📋 全部</button>
+  </div>`;
+
+  let html=togHtml+`<div class="ym-filter">
+    <label>年份</label>
+    <select onchange="bigFilterYear=this.value?+this.value:null;renderBigItems()">${yrOpts}</select>
+    ${bigFilterYear?`<button class="btn2" style="padding:4px 10px;font-size:12px;" onclick="bigFilterYear=null;renderBigItems()">✕ 清除</button>`:''}
+  </div>`;
+
+  // summary
+  html+=`<div class="sum3" style="margin-bottom:12px;">
+    <div class="scard"><div class="sl">筆數</div><div class="sv">${shown.length}</div></div>
+    <div class="scard inc"><div class="sl">收入</div><div class="sv">${fmt(totalInc)}</div></div>
+    <div class="scard exp"><div class="sl">支出</div><div class="sv">${fmt(totalExp)}</div></div>
+  </div>`;
+
+  if(!shown.length){
+    html+=`<div class="es"><div class="ei">🔍</div>沒有超過 ${fmt(BIG_THRESHOLD)} 的記錄</div>`;
+    el.innerHTML=html; return;
+  }
+
+  html+=`<div class="card">
+    <div class="card-t">💰 大筆記錄（金額 ≥ ${fmt(BIG_THRESHOLD)}）</div>`;
+
+  shown.forEach(r=>{
+    if(r._kind==='i'){
+      html+=`<div class="big-row">
+        <div class="tic" style="background:#D1FAE5;">💰</div>
+        <div class="big-info">
+          <div class="big-name">${r.source}</div>
+          <div class="big-meta">${r.date} · 收入</div>
+        </div>
+        <div class="big-amt" style="color:var(--g);">+${fmt(r.amount)}</div>
+      </div>`;
+    } else {
+      const cat=CAT_MAP[r.cat]||{em:'📦',label:'其他'};
+      const user=r.sub||'';
+      const pm=getAllPayments().find(p=>p.id===r.payment);
+      const meta=[r.date, cat.em+cat.label, user, pm?pm.label:''].filter(Boolean).join(' · ');
+      const isFixed=r.type==='fixed';
+      html+=`<div class="big-row">
+        <div class="tic" style="background:${isFixed?'#FEF3C7':'#FEE2E2'};">${isFixed?'📌':cat.em}</div>
+        <div class="big-info">
+          <div class="big-name">${r.item||cat.label}${user?' ('+user+')':''}</div>
+          <div class="big-meta">${meta}</div>
+        </div>
+        <div class="big-amt" style="color:${isFixed?'var(--w)':'var(--r)'};">-${fmt(r.amount)}</div>
+      </div>`;
+    }
+  });
+
+  html+=`</div>`;
+  el.innerHTML=html;
+}
+
+function renderRecentFilter(){
+  const yrs=getAvailableYears();
+  const yrOpts=`<option value="">年份</option>`+yrs.map(y=>`<option value="${y}"${recentFilterYear===y?' selected':''}>${y}年</option>`).join('');
+  const moOpts=`<option value="">月份</option>`+Array.from({length:12},(_,i)=>`<option value="${i+1}"${recentFilterMonth===i+1?' selected':''}>${i+1}月</option>`).join('');
+  return `<div class="ym-filter" style="margin-bottom:10px;">
+    <label>歷史查詢</label>
+    <select onchange="recentFilterYear=this.value?+this.value:null;renderRecent()">${yrOpts}</select>
+    <select onchange="recentFilterMonth=this.value?+this.value:null;renderRecent()">${moOpts}</select>
+    ${recentFilterYear||recentFilterMonth?`<button class="btn2" style="padding:4px 10px;font-size:12px;" onclick="recentFilterYear=null;recentFilterMonth=null;renderRecent()">✕ 清除</button>`:''}
+  </div>`;
+}
+
+function renderRecentRow(r){
+  if(r._kind==='i'){
+    const d=r.date.replace(/-/g,'/');
+    return `<div class="txn-compact" onclick="editRecord('${r.id}','i')" style="cursor:pointer;">
+      <div class="tc-main">
+        <span class="tc-name">💰 ${r.source}</span>
+        <span class="tc-sep">${d}</span>
+        <span class="tc-sep">收入</span>
+        <span class="tc-amt inc">+${fmt(r.amount)}</span>
+      </div>
+      <span class="del-hint" onclick="event.stopPropagation();delInc('${r.id}')">🗑</span>
+    </div>`;
+  }
+  const cat=CAT_MAP[r.cat]||{em:'📦',label:'其他'};
+  const lbl=r.type==='fixed'?r.item:(r.item||cat.label)+(r.sub?` (${r.sub})`:'');
+  const cls=r.type==='fixed'?'f':'e';
+  const pm=getAllPayments().find(p=>p.id===r.payment);
+  const pmLabel=pm?`${pm.em}${pm.label}`:'';
+  const d=r.date.replace(/-/g,'/');
+  const isCC=CC_METHODS.includes(r.payment);
+  const recBtn=isCC?`<span title="${r.reconciled?'已對帳，點擊取消':'尚未對帳，點擊標記'}"
+    onclick="event.stopPropagation();toggleReconcile('${r.id}')"
+    style="cursor:pointer;font-size:15px;flex-shrink:0;opacity:${r.reconciled?1:0.3};">${r.reconciled?'✅':'☑️'}</span>`:'';
+  return `<div class="txn-compact" onclick="editRecord('${r.id}','t')" style="cursor:pointer;${r.reconciled?'opacity:.7;':''}">
+    <div class="tc-main">
+      <span class="tc-name">${r.type==='fixed'?'📌':cat.em} ${lbl}</span>
+      <span class="tc-sep">${d}</span>
+      ${pmLabel?`<span class="tc-sep">${pmLabel}</span>`:''}
+      <span class="tc-amt ${cls}">-${fmt(r.amount)}</span>
+    </div>
+    ${recBtn}
+    <span class="del-hint" onclick="event.stopPropagation();delTxn('${r.id}')">🗑</span>
+  </div>`;
+}
+
+function renderRecent(){
+  const el=document.getElementById('recent-list');
+  // Build pool based on current entryType
+  let pool;
+  if(entryType==='income'){
+    pool=getIncs().map(i=>({...i,_kind:'i'}));
+  } else if(entryType==='expense'){
+    pool=getTxns().filter(t=>t.type==='expense').map(t=>({...t,_kind:'t'}));
+  } else if(entryType==='fixed'){
+    pool=getTxns().filter(t=>t.type==='fixed').map(t=>({...t,_kind:'t'}));
+  } else {
+    pool=[...getTxns().map(t=>({...t,_kind:'t'})),...getIncs().map(i=>({...i,_kind:'i'}))];
+  }
+  pool.sort((a,b)=>b.date.localeCompare(a.date));
+  const filterBar=renderRecentFilter();
+  if(!pool.length){
+    el.innerHTML=filterBar+`<div class="es"><div class="ei">📝</div>還沒有記錄<br>開始記帳吧！</div>`;
+    return;
+  }
+  const isFiltered=recentFilterYear||recentFilterMonth;
+  let shown;
+  if(isFiltered){
+    shown=pool.filter(r=>{
+      const [y,m]=r.date.split('-').map(Number);
+      if(recentFilterYear&&y!==recentFilterYear) return false;
+      if(recentFilterMonth&&m!==recentFilterMonth) return false;
+      return true;
+    });
+  } else {
+    shown=pool.slice(0,20);
+  }
+  const rows=shown.map(r=>renderRecentRow(r)).join('');
+  const typeLabel=entryType==='income'?'收入':entryType==='fixed'?'固定支出':'支出';
+  const footer=!isFiltered&&pool.length>20
+    ?`<div style="text-align:center;padding:10px 0;font-size:13px;color:var(--c5);">顯示最近 20 筆${typeLabel}（共 ${pool.length} 筆）<br>可用上方下拉式選單查詢歷史記錄</div>`
+    :isFiltered&&shown.length===0
+    ?`<div class="es"><div class="ei">🔍</div>此期間沒有${typeLabel}記錄</div>`
+    :'';
+  el.innerHTML=filterBar+rows+footer;
+}
+
+// ── Spread group helpers ─────────────────────────────────────
+let _spreadEditGroup=null;
+
+function getSpreadGroup(txn){
+  const all=getTxns();
+  // New records: group by spreadId
+  if(txn.spreadId){
+    return all.filter(t=>t.spreadId===txn.spreadId).sort((a,b)=>a.date.localeCompare(b.date));
+  }
+  // Old records without spreadId: match by cat+item+sub+payment+totalStr in spreadInfo
+  if(!txn.spreadInfo) return [txn];
+  const m=txn.spreadInfo.match(/總額([\d,]+)/);
+  if(!m) return [txn];
+  const totalStr=m[1];
+  return all.filter(t=>
+    t.cat==='edu'&&t.item===txn.item&&t.sub===txn.sub&&
+    t.payment===txn.payment&&t.spreadInfo&&t.spreadInfo.includes(`總額${totalStr}`)
+  ).sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+function updateSpreadPreview(){
+  const el=document.getElementById('spread-preview');
+  if(!el||!_spreadEditGroup) return;
+  const rawAmt=document.getElementById('m-amt');
+  const total=parseFloat((rawAmt?.dataset.raw||rawAmt?.value||'0').replace(/,/g,''))||0;
+  const n=_spreadEditGroup.length;
+  if(total<=0||n===0){ el.innerHTML=''; return; }
+  const perM=Math.floor(total/n);
+  const rem=total-perM*(n-1);
+  const rows=_spreadEditGroup.map((t,i)=>{
+    const mAmt=i===n-1?rem:perM;
+    return `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid var(--c2);">
+      <span style="color:var(--c5);">${t.date.slice(0,7)}</span>
+      <span style="font-weight:500;">${fmt(mAmt)} 元</span>
+    </div>`;
+  }).join('');
+  el.innerHTML=`<div style="font-size:12px;color:var(--p);font-weight:500;margin-bottom:6px;">
+    每月 ${fmt(perM)} 元${rem!==perM?`（最後一月 ${fmt(rem)} 元）`:''}
+  </div>${rows}`;
+}
+
+function editSpreadGroup(id){
+  const sid=String(id);
+  const txn=getTxns().find(t=>String(t.id)===sid); if(!txn) return;
+  _spreadEditGroup=getSpreadGroup(txn);
+  const group=_spreadEditGroup;
+  const n=group.length;
+  const totalAmt=group.reduce((s,t)=>s+t.amount,0);
+  const perM=Math.floor(totalAmt/n), rem=totalAmt-perM*(n-1);
+  const allPay=getAllPayments();
+  const firstDate=group[0]?.date?.slice(0,7)||'';
+  const lastDate=group[n-1]?.date?.slice(0,7)||'';
+  const initRows=group.map((t,i)=>{
+    const mAmt=i===n-1?rem:perM;
+    return `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid var(--c2);">
+      <span style="color:var(--c5);">${t.date.slice(0,7)}</span>
+      <span style="font-weight:500;">${fmt(mAmt)} 元</span>
+    </div>`;
+  }).join('');
+  openModal(`<div class="mt">編輯整組分攤</div>
+    <div style="padding:8px 12px;background:#EFF6FF;border-radius:8px;font-size:12px;color:#1E40AF;margin-bottom:12px;">
+      📌 共 ${n} 個月｜${firstDate} ～ ${lastDate}
+    </div>
+    <div class="fg"><label class="fl">新總金額</label>
+      <input class="fi big" id="m-amt" type="text" inputmode="decimal" value="${totalAmt}"
+        oninput="amtInput(this);updateSpreadPreview()"
+        onblur="amtBlur(this);updateSpreadPreview()"
+        onfocus="amtFocus(this)"></div>
+    <div class="fg"><label class="fl">對象</label>
+      <select class="fi" id="m-sub">${SUB_EDU.map(s=>`<option${s===(txn.sub||'')?' selected':''}>${s}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">項目說明</label>
+      <input class="fi" id="m-item" value="${txn.item||''}"></div>
+    <div class="fg"><label class="fl">支付方式</label>
+      <select class="fi" id="m-pay">${allPay.map(p=>`<option value="${p.id}"${p.id===txn.payment?' selected':''}>${p.em} ${p.label}</option>`).join('')}</select></div>
+    <div id="spread-preview" style="margin:8px 0 4px;">${initRows}</div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn1" style="flex:1" onclick="saveSpreadGroup('${id}')">儲存整組</button>
+      <button class="btnd" onclick="delSpreadGroup('${id}')">刪除整組</button>
+    </div>
+    <div style="text-align:center;margin-top:10px;">
+      <button class="btn2" style="font-size:12px;padding:6px 14px;" onclick="editSingleTxn('${id}')">只修改此筆</button>
+    </div>`);
+}
+
+function saveSpreadGroup(id){
+  const sid=String(id);
+  const group=_spreadEditGroup; if(!group||!group.length) return;
+  const rawAmt=document.getElementById('m-amt');
+  const total=parseFloat((rawAmt.dataset.raw||rawAmt.value).replace(/,/g,''));
+  if(!total||total<=0){ toast('請輸入金額'); return; }
+  const sub=document.getElementById('m-sub')?.value||'';
+  const item=document.getElementById('m-item').value;
+  const payment=document.getElementById('m-pay').value;
+  const n=group.length;
+  const perM=Math.floor(total/n);
+  const rem=total-perM*(n-1);
+  const txns=getTxns();
+  group.forEach((gt,i)=>{
+    const t=txns.find(x=>String(x.id)===String(gt.id)); if(!t) return;
+    t.amount=i===n-1?rem:perM;
+    t.sub=sub; t.item=item; t.payment=payment;
+    t.spreadInfo=`第${i+1}攤/共${n}攤（總額${total.toLocaleString('zh-TW')}）`;
+  });
+  saveTxns(txns);
+  _spreadEditGroup=null;
+  closeModal(); renderRecent();
+  if(curScreen==='monthly') renderMonthly();
+  toast('✓ 已更新整組分攤');
+}
+
+function delSpreadGroup(id){
+  const group=_spreadEditGroup; if(!group||!group.length) return;
+  if(!confirm(`刪除整組 ${group.length} 筆分攤記錄？`)) return;
+  const ids=new Set(group.map(t=>String(t.id)));
+  saveTxns(getTxns().filter(t=>!ids.has(String(t.id))));
+  _spreadEditGroup=null;
+  closeModal(); renderRecent();
+  if(curScreen==='monthly') renderMonthly();
+  toast('已刪除整組分攤');
+}
+
+function editSingleTxn(id){
+  // Force single-record edit (bypass spread group)
+  const sid=String(id);
+  const txn=getTxns().find(x=>String(x.id)===sid); if(!txn) return;
+  const allPay=getAllPayments();
+  openModal(`<div class="mt">編輯此筆（單筆）</div>
+    <div style="padding:6px 10px;background:#FEF3C7;border-radius:8px;font-size:12px;color:#92400E;margin-bottom:10px;">⚠️ 只修改此筆，不影響其他分攤</div>
+    <div class="fg"><label class="fl">金額</label>
+      <input class="fi big" id="m-amt" type="text" inputmode="decimal" value="${txn.amount}"
+        oninput="amtInput(this)" onblur="amtBlur(this)" onfocus="amtFocus(this)"></div>
+    <div class="fg"><label class="fl">對象</label>
+      <select class="fi" id="m-sub">${SUB_EDU.map(s=>`<option${s===(txn.sub||'')?' selected':''}>${s}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">項目說明</label>
+      <input class="fi" id="m-item" value="${txn.item||''}"></div>
+    <div class="fg"><label class="fl">支付方式</label>
+      <select class="fi" id="m-pay">${allPay.map(p=>`<option value="${p.id}"${p.id===txn.payment?' selected':''}>${p.em} ${p.label}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">日期</label>
+      <input class="fi" id="m-date" type="date" value="${txn.date}"></div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn1" style="flex:1" onclick="saveEditTxn('${id}')">儲存</button>
+      <button class="btnd" onclick="delTxn('${id}');closeModal()">刪除此筆</button>
+    </div>`);
+}
+
+function editRecord(id, kind){
+  const sid=String(id); // normalize: historical IDs are numbers, new IDs are strings
+  if(kind==='i'){
+    const inc=getIncs().find(x=>String(x.id)===sid); if(!inc) return;
+    openModal(`<div class="mt">編輯收入</div>
+      <div class="fg"><label class="fl">金額</label>
+        <input class="fi big" id="m-amt" type="text" inputmode="decimal" value="${inc.amount}"
+          oninput="amtInput(this)" onblur="amtBlur(this)" onfocus="amtFocus(this)"></div>
+      <div class="fg"><label class="fl">來源</label>
+        <select class="fi" id="m-src">${INC_SRCS.map(s=>`<option${s===inc.source?' selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">日期</label>
+        <input class="fi" id="m-date" type="date" value="${inc.date}"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn1" style="flex:1" onclick="saveEditInc('${id}')">儲存</button>
+        <button class="btnd" onclick="delInc('${id}');closeModal()">刪除</button>
+      </div>`);
+  } else {
+    const txn=getTxns().find(x=>String(x.id)===sid); if(!txn) return;
+    // Spread edu records → batch edit by default
+    if(txn.cat==='edu'&&txn.spreadInfo){ editSpreadGroup(id); return; }
+    const allPay=getAllPayments();
+    const isEdu=txn.cat==='edu';
+    const subHtml=isEdu?`<div class="fg"><label class="fl">對象</label>
+      <select class="fi" id="m-sub">${SUB_EDU.map(s=>`<option${s===(txn.sub||'')?' selected':''}>${s}</option>`).join('')}</select></div>`:'';
+    openModal(`<div class="mt">編輯支出</div>
+      <div class="fg"><label class="fl">金額</label>
+        <input class="fi big" id="m-amt" type="text" inputmode="decimal" value="${txn.amount}"
+          oninput="amtInput(this)" onblur="amtBlur(this)" onfocus="amtFocus(this)"></div>
+      <div class="fg"><label class="fl">類別</label>
+        <select class="fi" id="m-cat">${CATS.map(c=>`<option value="${c.id}"${c.id===txn.cat?' selected':''}>${c.em} ${c.label}</option>`).join('')}</select></div>
+      ${subHtml}
+      <div class="fg"><label class="fl">項目說明</label>
+        <input class="fi" id="m-item" value="${txn.item||''}"></div>
+      <div class="fg"><label class="fl">支出方式</label>
+        <select class="fi" id="m-pay">${allPay.map(p=>`<option value="${p.id}"${p.id===txn.payment?' selected':''}>${p.em} ${p.label}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">日期</label>
+        <input class="fi" id="m-date" type="date" value="${txn.date}"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn1" style="flex:1" onclick="saveEditTxn('${id}')">儲存</button>
+        <button class="btnd" onclick="delTxn('${id}');closeModal()">刪除</button>
+      </div>`);
+  }
+}
+
+function saveEditTxn(id){
+  const sid=String(id);
+  const txns=getTxns();
+  const t=txns.find(x=>String(x.id)===sid); if(!t) return;
+  const rawAmt=document.getElementById('m-amt');
+  const n=parseFloat((rawAmt.dataset.raw||rawAmt.value).replace(/,/g,''));
+  if(!n||n<=0){ toast('請輸入金額'); return; }
+  t.amount=n;
+  t.cat=document.getElementById('m-cat').value;
+  const subEl=document.getElementById('m-sub');
+  if(subEl) t.sub=subEl.value; else if(t.cat!=='edu') t.sub='';
+  t.item=document.getElementById('m-item').value;
+  t.payment=document.getElementById('m-pay').value;
+  t.date=document.getElementById('m-date').value;
+  saveTxns(txns);
+  closeModal(); renderRecent();
+  if(curScreen==='big') renderBigItems();
+  toast('✓ 已更新');
+}
+function saveEditInc(id){
+  const sid=String(id);
+  const incs=getIncs();
+  const i=incs.find(x=>String(x.id)===sid); if(!i) return;
+  const rawAmt=document.getElementById('m-amt');
+  const n=parseFloat((rawAmt.dataset.raw||rawAmt.value).replace(/,/g,''));
+  if(!n||n<=0){ toast('請輸入金額'); return; }
+  i.amount=n;
+  i.source=document.getElementById('m-src').value;
+  i.date=document.getElementById('m-date').value;
+  saveIncs(incs);
+  closeModal(); renderRecent();
+  if(curScreen==='big') renderBigItems();
+  toast('✓ 已更新');
+}
+
+function delTxn(id){
+  const sid=String(id);
+  if(!confirm('刪除這筆記錄？')) return;
+  saveTxns(getTxns().filter(t=>String(t.id)!==sid));
+  renderRecent();
+  if(curScreen==='big') renderBigItems();
+  toast('已刪除');
+}
+function delInc(id){
+  const sid=String(id);
+  if(!confirm('刪除這筆收入？')) return;
+  saveIncs(getIncs().filter(i=>String(i.id)!==sid));
+  renderRecent();
+  if(curScreen==='big') renderBigItems();
+  toast('已刪除');
+}
+
+// ============================================================
+// MONTHLY REPORT
+// ============================================================
+function changeMonth(d){
+  curMonth+=d;
+  if(curMonth>12){curMonth=1;curYear++;}
+  if(curMonth<1){curMonth=12;curYear--;}
+  renderMonthly();
+}
+function toggleEduSec(id){
+  const el=document.getElementById(id);
+  const ico=document.getElementById(id+'-ico');
+  if(!el) return;
+  const open=el.style.display==='block';
+  el.style.display=open?'none':'block';
+  if(ico) ico.textContent=open?'+':'−';
+}
+
+function getMonthData(year,month){
+  const txns=getTxns().filter(t=>{
+    const [y,m]=t.date.split('-').map(Number);
+    return y===year&&m===month;
+  });
+  const incs=getIncs().filter(i=>{
+    const [y,m]=i.date.split('-').map(Number);
+    return y===year&&m===month;
+  });
+  const s=getSettings();
+  // Calculate fixed expenses for this month
+  const fixedList=[];
+  for(const fe of s.fixedExpenses){
+    let applies=false;
+    if(fe.freq==='monthly') applies=true;
+    else if(fe.freq==='bimonthly-even') applies=(month%2===0);
+    else if(fe.freq==='bimonthly-odd') applies=(month%2===1);
+    else if(fe.freq==='quarterly') applies=(month%3===0);
+    else if(fe.freq==='yearly') applies=(month===12);
+    if(applies){
+      // Check for override
+      const ov=txns.find(t=>t.type==='fixed'&&t.feId===fe.id);
+      fixedList.push({...fe, actualAmount: ov?ov.amount:fe.amount, hasOverride:!!ov});
+    }
+  }
+  // Also include any 'fixed' txns for items not in settings
+  const extraFixed=txns.filter(t=>t.type==='fixed'&&!s.fixedExpenses.find(fe=>fe.id===t.feId));
+  // Variable expenses by category
+  const varTxns=txns.filter(t=>t.type==='expense');
+  const catTotals={};
+  for(const c of CATS) catTotals[c.id]=0;
+  for(const t of varTxns) catTotals[t.cat]=(catTotals[t.cat]||0)+t.amount;
+  const totalInc=incs.reduce((s,i)=>s+i.amount,0);
+  const totalFixed=fixedList.reduce((s,f)=>s+f.actualAmount,0)+extraFixed.reduce((s,t)=>s+t.amount,0);
+  const totalVar=varTxns.reduce((s,t)=>s+t.amount,0);
+  const totalExp=totalFixed+totalVar;
+  return {txns,incs,fixedList,extraFixed,varTxns,catTotals,totalInc,totalFixed,totalVar,totalExp,net:totalInc-totalExp};
+}
+
+let monthlyChart=null;
+function renderMonthly(){
+  document.getElementById('month-display').textContent=` ${MONTHS_TW[curMonth-1]}`;
+  populateYearSel('yr-sel-m', curYear);
+  const d=getMonthData(curYear,curMonth);
+  const el=document.getElementById('monthly-content');
+  // Summary
+  let html=`<div class="sum3">
+    <div class="scard inc"><div class="sl">總收入</div><div class="sv">${fmt(d.totalInc)}</div></div>
+    <div class="scard exp"><div class="sl">總支出</div><div class="sv">${fmt(d.totalExp)}</div></div>
+    <div class="scard net"><div class="sl">淨值</div><div class="sv" style="color:${d.net>=0?'var(--g)':'var(--r)'};">${d.net>=0?'+':''}${fmt(d.net)}</div></div>
+  </div>`;
+  // Year-over-year comparison
+  const dPrev=getMonthData(curYear-1,curMonth);
+  if(dPrev.totalInc>0||dPrev.totalExp>0){
+    const diffInc=d.totalInc-dPrev.totalInc;
+    const diffExp=d.totalExp-dPrev.totalExp;
+    const diffNet=d.net-dPrev.net;
+    const pct=(v,base)=>base===0?'—':(v>=0?'+':'')+Math.round(v/base*100)+'%';
+    const clr=v=>v>0?'var(--r)':v<0?'var(--g)':'var(--c5)';
+    const clrInc=v=>v>0?'var(--g)':v<0?'var(--r)':'var(--c5)';
+    html+=`<div class="card"><div class="card-t">📅 與去年同月比較（vs ${curYear-1}年${curMonth}月）</div>
+      <div class="scroll-x"><table class="tbl">
+        <tr><th>項目</th><th>${curYear-1}年</th><th>${curYear}年</th><th>差異</th></tr>
+        <tr><td style="text-align:left;">固定支出</td><td>${fmt(dPrev.totalFixed)}</td><td>${fmt(d.totalFixed)}</td><td style="color:${clr(d.totalFixed-dPrev.totalFixed)};font-weight:600;">${d.totalFixed-dPrev.totalFixed>=0?'+':''}${fmt(d.totalFixed-dPrev.totalFixed)}</td></tr>
+        <tr><td style="text-align:left;">生活支出</td><td>${fmt(dPrev.totalVar)}</td><td>${fmt(d.totalVar)}</td><td style="color:${clr(d.totalVar-dPrev.totalVar)};font-weight:600;">${d.totalVar-dPrev.totalVar>=0?'+':''}${fmt(d.totalVar-dPrev.totalVar)}</td></tr>
+        <tr class="tot"><td style="text-align:left;color:var(--r);">支出合計</td><td>${fmt(dPrev.totalExp)}</td><td>${fmt(d.totalExp)}</td><td style="color:${clr(diffExp)};font-weight:600;">${diffExp>=0?'+':''}${fmt(diffExp)}</td></tr>
+        <tr class="tot"><td style="text-align:left;">淨值</td><td style="color:${dPrev.net>=0?'var(--g)':'var(--r)'};">${dPrev.net>=0?'+':''}${fmt(dPrev.net)}</td><td style="color:${d.net>=0?'var(--g)':'var(--r)'};">${d.net>=0?'+':''}${fmt(d.net)}</td><td style="color:${clrInc(diffNet)};font-weight:600;">${diffNet>=0?'+':''}${fmt(diffNet)}</td></tr>
+      </table></div>
+    </div>`;
+  }
+  // Previous month comparison
+  let prevM=curMonth-1, prevY=curYear;
+  if(prevM<1){prevM=12;prevY--;}
+  const dLast=getMonthData(prevY,prevM);
+  {
+    const clr=v=>v>0?'var(--r)':v<0?'var(--g)':'var(--c5)';
+    const clrInc=v=>v>0?'var(--g)':v<0?'var(--r)':'var(--c5)';
+    const dInc=d.totalInc-dLast.totalInc;
+    const dExp=d.totalExp-dLast.totalExp;
+    const dNet=d.net-dLast.net;
+    const dFixed=d.totalFixed-dLast.totalFixed;
+    const dVar=d.totalVar-dLast.totalVar;
+    html+=`<div class="card"><div class="card-t">📅 與上個月比較（vs ${prevY}年${prevM}月）</div>
+      <div class="scroll-x"><table class="tbl">
+        <tr><th>項目</th><th>${prevY}年${prevM}月</th><th>${curYear}年${curMonth}月</th><th>差異</th></tr>
+        <tr><td style="text-align:left;">固定支出</td><td>${fmt(dLast.totalFixed)}</td><td>${fmt(d.totalFixed)}</td><td style="color:${clr(dFixed)};font-weight:600;">${dFixed>=0?'+':''}${fmt(dFixed)}</td></tr>
+        <tr><td style="text-align:left;">生活支出</td><td>${fmt(dLast.totalVar)}</td><td>${fmt(d.totalVar)}</td><td style="color:${clr(dVar)};font-weight:600;">${dVar>=0?'+':''}${fmt(dVar)}</td></tr>
+        <tr class="tot"><td style="text-align:left;color:var(--r);">支出合計</td><td>${fmt(dLast.totalExp)}</td><td>${fmt(d.totalExp)}</td><td style="color:${clr(dExp)};font-weight:600;">${dExp>=0?'+':''}${fmt(dExp)}</td></tr>
+        <tr class="tot"><td style="text-align:left;">淨值</td><td style="color:${dLast.net>=0?'var(--g)':'var(--r)'};">${dLast.net>=0?'+':''}${fmt(dLast.net)}</td><td style="color:${d.net>=0?'var(--g)':'var(--r)'};">${d.net>=0?'+':''}${fmt(d.net)}</td><td style="color:${clrInc(dNet)};font-weight:600;">${dNet>=0?'+':''}${fmt(dNet)}</td></tr>
+      </table></div>
+    </div>`;
+  }
+  // Horizontal bar chart: variable categories + fixed expenses, labels inside bars
+  const catRows=CATS.filter(c=>d.catTotals[c.id]>0).sort((a,b)=>d.catTotals[b.id]-d.catTotals[a.id]);
+  const CAT_BAR_COLOR={
+    food:   '#FEF08A',
+    edu:    '#BAE6FD',
+    house:  '#6EE7B7',
+    dress:  '#C4B5FD',
+    med:    '#FCA5A5',
+    car:    '#86EFAC',
+    fun:    '#FDB584',
+    gift:   '#A5F3FC',
+    donate: '#D9F99D',
+    other:  '#CBD5E1',
+  };
+  const barItems=[...catRows.map(c=>({label:c.em+' '+c.label,val:d.catTotals[c.id],color:CAT_BAR_COLOR[c.id]||'#E2E8F0'}))];
+  if(d.totalFixed>0) barItems.push({label:'🔒 固定支出',val:d.totalFixed,color:'#FBCFE8'});
+  html+=`<div class="card"><div class="card-t">📊 支出分類 <span style="float:right;color:var(--c9);font-size:14px;">${fmt(d.totalExp)}</span></div>`;
+  if(barItems.length===0){
+    html+=`<div style="font-size:13px;color:var(--c5);">本月尚無支出記錄</div>`;
+  } else {
+    const maxVal=Math.max(...barItems.map(b=>b.val),1);
+    const totalForPct=barItems.reduce((s,b)=>s+b.val,0)||1;
+    html+=barItems.map(b=>{
+      const barW=Math.max(Math.round(b.val/maxVal*100),6);
+      const pctStr=Math.round(b.val/totalForPct*100)+'%';
+      return `<div style="display:flex;align-items:center;margin-bottom:7px;">
+        <div style="flex:1;position:relative;height:26px;background:var(--c2);border-radius:6px;overflow:hidden;">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:${barW}%;background:${b.color};border-radius:6px;display:flex;align-items:center;padding:0 8px;box-sizing:border-box;min-width:90px;">
+            <span style="font-size:12px;font-weight:500;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.label} <span style="font-size:11px;opacity:.75;">${pctStr}</span></span>
+          </div>
+        </div>
+        <div style="font-size:13px;font-weight:600;color:var(--c7);margin-left:8px;min-width:70px;text-align:right;">${fmt(b.val)}</div>
+      </div>`;
+    }).join('');
+  }
+  html+=`</div>`;
+  // Education breakdown: collapsible per-person sections
+  const eduTxns=d.varTxns.filter(t=>t.cat==='edu');
+  if(eduTxns.length>0){
+    const subTotals={};
+    const subTxns={};
+    for(const t of eduTxns){
+      const k=t.sub||'其他';
+      subTotals[k]=(subTotals[k]||0)+t.amount;
+      if(!subTxns[k]) subTxns[k]=[];
+      subTxns[k].push(t);
+    }
+    html+=`<div class="card"><div class="card-t">📚 教育費明細</div>`;
+    html+=Object.entries(subTotals).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{
+      const txList=subTxns[k].sort((a,b)=>a.date.localeCompare(b.date));
+      const secId=`edu-sec-${k}-${curYear}-${curMonth}`;
+      const details=txList.map(t=>`<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px;border-bottom:1px solid var(--c2);">
+        <span style="color:var(--c5);">${t.date.slice(5)} ${t.item||''}</span>
+        <span style="font-weight:500;">${fmt(t.amount)}</span>
+      </div>`).join('');
+      return `<div class="fi2" onclick="toggleEduSec('${secId}')" style="cursor:pointer;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="${secId}-ico" style="font-size:15px;color:var(--p);font-weight:700;line-height:1;flex-shrink:0;">+</span>
+          <div class="fn">${k}</div>
+        </div>
+        <div class="fa">${fmt(v)}</div>
+      </div>
+      <div id="${secId}" style="display:none;padding:4px 0 8px 28px;">${details}</div>`;
+    }).join('');
+    html+=`</div>`;
+  }
+  // Income detail
+  if(d.incs.length>0){
+    html+=`<div class="card"><div class="card-t">💰 收入明細</div>`;
+    html+=d.incs.map(i=>`<div class="fi2">
+      <div><div class="fn">${i.source}</div><div class="fm">${i.date}${i.note?' · '+i.note:''}</div></div>
+      <div class="fa" style="color:var(--g)">+${fmt(i.amount)}</div>
+    </div>`).join('');
+    html+=`</div>`;
+  }
+  el.innerHTML=html;
+  if(monthlyChart){monthlyChart.destroy();monthlyChart=null;}
+}
+
+// ============================================================
+// QUARTERLY REPORT
+// ============================================================
+function setQ(q){
+  curQ=q;
+  document.querySelectorAll('.qbtn').forEach((b,i)=>b.classList.toggle('on',i+1===q));
+  renderQuarterly();
+}
+
+let qChart=null;
+function renderQuarterly(){
+  populateYearSel('yr-sel-q', curYear);
+  const months=[1,2,3].map(i=>(curQ-1)*3+i);
+  const data=months.map(m=>getMonthData(curYear,m));
+  const el=document.getElementById('quarterly-content');
+  const totInc=data.reduce((s,d)=>s+d.totalInc,0);
+  const totExp=data.reduce((s,d)=>s+d.totalExp,0);
+  const totNet=totInc-totExp;
+  let html=`<div class="sum3">
+    <div class="scard inc"><div class="sl">Q${curQ}收入</div><div class="sv">${fmt(totInc)}</div></div>
+    <div class="scard exp"><div class="sl">Q${curQ}支出</div><div class="sv">${fmt(totExp)}</div></div>
+    <div class="scard net"><div class="sl">Q${curQ}淨值</div><div class="sv" style="color:${totNet>=0?'var(--g)':'var(--r)'};">${totNet>=0?'+':''}${fmt(totNet)}</div></div>
+  </div>`;
+  // Shared helpers for quarterly comparisons
+  const clrQ=v=>v>0?'var(--r)':v<0?'var(--g)':'var(--c5)';
+  const clrIncQ=v=>v>0?'var(--g)':v<0?'var(--r)':'var(--c5)';
+  const diffCell=(v,base,clrFn)=>`<td style="color:${clrFn(v)};font-weight:600;">${v>=0?'+':''}${fmt(v)}</td>`;
+
+  // Previous quarter comparison
+  let prevQ=curQ-1, prevQYear=curYear;
+  if(prevQ<1){prevQ=4;prevQYear=curYear-1;}
+  const prevQMonths=[1,2,3].map(i=>(prevQ-1)*3+i);
+  const prevQData2=prevQMonths.map(m=>getMonthData(prevQYear,m));
+  const pqTotInc=prevQData2.reduce((s,d)=>s+d.totalInc,0);
+  const pqTotExp=prevQData2.reduce((s,d)=>s+d.totalExp,0);
+  const pqTotFixed=prevQData2.reduce((s,d)=>s+d.totalFixed,0);
+  const pqTotVar=prevQData2.reduce((s,d)=>s+d.totalVar,0);
+  const pqTotNet=pqTotInc-pqTotExp;
+  const curFixed=data.reduce((s,d)=>s+d.totalFixed,0);
+  const curVar=data.reduce((s,d)=>s+d.totalVar,0);
+  if(pqTotInc>0||pqTotExp>0){
+    html+=`<div class="card"><div class="card-t">📅 與上一季比較（vs ${prevQYear}年Q${prevQ}）</div>
+      <div class="scroll-x"><table class="tbl">
+        <tr><th>項目</th><th>${prevQYear}年Q${prevQ}</th><th>${curYear}年Q${curQ}</th><th>差異</th></tr>
+        <tr><td style="text-align:left;color:var(--g);">收入</td><td>${fmt(pqTotInc)}</td><td>${fmt(totInc)}</td>${diffCell(totInc-pqTotInc,pqTotInc,clrIncQ)}</tr>
+        <tr><td style="text-align:left;">固定支出</td><td>${fmt(pqTotFixed)}</td><td>${fmt(curFixed)}</td>${diffCell(curFixed-pqTotFixed,pqTotFixed,clrQ)}</tr>
+        <tr><td style="text-align:left;">生活支出</td><td>${fmt(pqTotVar)}</td><td>${fmt(curVar)}</td>${diffCell(curVar-pqTotVar,pqTotVar,clrQ)}</tr>
+        <tr class="tot"><td style="text-align:left;color:var(--r);">支出合計</td><td>${fmt(pqTotExp)}</td><td>${fmt(totExp)}</td>${diffCell(totExp-pqTotExp,pqTotExp,clrQ)}</tr>
+        <tr class="tot"><td style="text-align:left;">淨值</td><td style="color:${pqTotNet>=0?'var(--g)':'var(--r)'};">${pqTotNet>=0?'+':''}${fmt(pqTotNet)}</td><td style="color:${totNet>=0?'var(--g)':'var(--r)'};">${totNet>=0?'+':''}${fmt(totNet)}</td>${diffCell(totNet-pqTotNet,Math.abs(pqTotNet),clrIncQ)}</tr>
+      </table></div>
+    </div>`;
+  }
+
+  // Year-over-year comparison (quarterly)
+  const prevQData=months.map(m=>getMonthData(curYear-1,m));
+  const prevTotInc=prevQData.reduce((s,d)=>s+d.totalInc,0);
+  const prevTotExp=prevQData.reduce((s,d)=>s+d.totalExp,0);
+  const prevTotFixed=prevQData.reduce((s,d)=>s+d.totalFixed,0);
+  const prevTotVar=prevQData.reduce((s,d)=>s+d.totalVar,0);
+  const prevTotNet=prevTotInc-prevTotExp;
+  if(prevTotInc>0||prevTotExp>0){
+    html+=`<div class="card"><div class="card-t">📅 與去年同季比較（vs ${curYear-1}年Q${curQ}）</div>
+      <div class="scroll-x"><table class="tbl">
+        <tr><th>項目</th><th>${curYear-1}年Q${curQ}</th><th>${curYear}年Q${curQ}</th><th>差異</th></tr>
+        <tr><td style="text-align:left;color:var(--g);">收入</td><td>${fmt(prevTotInc)}</td><td>${fmt(totInc)}</td>${diffCell(totInc-prevTotInc,prevTotInc,clrIncQ)}</tr>
+        <tr><td style="text-align:left;">固定支出</td><td>${fmt(prevTotFixed)}</td><td>${fmt(curFixed)}</td>${diffCell(curFixed-prevTotFixed,prevTotFixed,clrQ)}</tr>
+        <tr><td style="text-align:left;">生活支出</td><td>${fmt(prevTotVar)}</td><td>${fmt(curVar)}</td>${diffCell(curVar-prevTotVar,prevTotVar,clrQ)}</tr>
+        <tr class="tot"><td style="text-align:left;color:var(--r);">支出合計</td><td>${fmt(prevTotExp)}</td><td>${fmt(totExp)}</td>${diffCell(totExp-prevTotExp,prevTotExp,clrQ)}</tr>
+        <tr class="tot"><td style="text-align:left;">淨值</td><td style="color:${prevTotNet>=0?'var(--g)':'var(--r)'};">${prevTotNet>=0?'+':''}${fmt(prevTotNet)}</td><td style="color:${totNet>=0?'var(--g)':'var(--r)'};">${totNet>=0?'+':''}${fmt(totNet)}</td>${diffCell(totNet-prevTotNet,Math.abs(prevTotNet),clrIncQ)}</tr>
+      </table></div>
+    </div>`;
+  }
+  // Chart
+  html+=`<div class="card"><div class="card-t">📈 收支走勢</div><div class="cc"><canvas id="qchart"></canvas></div></div>`;
+  el.innerHTML=html;
+  if(qChart){qChart.destroy();qChart=null;}
+  const ctx=document.getElementById('qchart');
+  if(ctx){
+    qChart=new Chart(ctx,{type:'bar',data:{
+      labels:months.map(m=>m+'月'),
+      datasets:[
+        {label:'收入',data:data.map(d=>d.totalInc),backgroundColor:'#D1FAE5',borderColor:'var(--g)',borderWidth:2},
+        {label:'支出',data:data.map(d=>d.totalExp),backgroundColor:'#FEE2E2',borderColor:'var(--r)',borderWidth:2}
+      ]
+    },options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom'}}}});
+  }
+}
+
+// ============================================================
+// ANNUAL REPORT
+// ============================================================
+let annChart=null, annPieChart=null;
+function renderAnnual(){
+  const allMonths=Array.from({length:12},(_,i)=>i+1);
+  const data=allMonths.map(m=>getMonthData(curYear,m));
+  const el=document.getElementById('annual-content');
+  const totInc=data.reduce((s,d)=>s+d.totalInc,0);
+  const totExp=data.reduce((s,d)=>s+d.totalExp,0);
+  const totNet=totInc-totExp;
+  let html=`<div class="sum3">
+    <div class="scard inc"><div class="sl">${curYear}年收入</div><div class="sv">${fmt(totInc)}</div></div>
+    <div class="scard exp"><div class="sl">${curYear}年支出</div><div class="sv">${fmt(totExp)}</div></div>
+    <div class="scard net"><div class="sl">年度淨值</div><div class="sv" style="color:${totNet>=0?'var(--g)':'var(--r)'};">${totNet>=0?'+':''}${fmt(totNet)}</div></div>
+  </div>`;
+  // Line chart
+  html+=`<div class="card"><div class="card-t">📈 全年收支走勢</div><div class="cc"><canvas id="achart"></canvas></div></div>`;
+  // Category annual totals
+  const catA={};
+  for(const c of CATS) catA[c.id]=data.reduce((s,d)=>s+d.catTotals[c.id],0);
+  const maxA=Math.max(...Object.values(catA),1);
+  html+=`<div class="card"><div class="card-t">📊 年度支出分類</div>`;
+  CATS.filter(c=>catA[c.id]>0).sort((a,b)=>catA[b.id]-catA[a.id]).forEach(c=>{
+    html+=`<div class="br">
+      <div class="bl">${c.em} ${c.label}</div>
+      <div class="bt"><div class="bf" style="width:${Math.round(catA[c.id]/maxA*100)}%"></div></div>
+      <div class="bv">${fmt(catA[c.id])}</div>
+    </div>`;
+  });
+  html+=`</div>`;
+  // Monthly table
+  html+=`<div class="card"><div class="card-t">📅 月份明細</div><div class="scroll-x"><table class="tbl">
+    <tr><th>月份</th><th>收入</th><th>固定支出</th><th>生活支出</th><th>淨值</th></tr>
+    ${data.map((d,i)=>`<tr>
+      <td>${i+1}月</td>
+      <td style="color:var(--g);">${d.totalInc?fmt(d.totalInc):'-'}</td>
+      <td>${d.totalFixed?fmt(d.totalFixed):'-'}</td>
+      <td>${d.totalVar?fmt(d.totalVar):'-'}</td>
+      <td style="color:${d.net>=0?'var(--g)':'var(--r)'};">${d.totalInc||d.totalExp?(d.net>=0?'+':'')+fmt(d.net):'-'}</td>
+    </tr>`).join('')}
+    <tr class="tot">
+      <td>全年</td>
+      <td style="color:var(--g);">${fmt(totInc)}</td>
+      <td>${fmt(data.reduce((s,d)=>s+d.totalFixed,0))}</td>
+      <td>${fmt(data.reduce((s,d)=>s+d.totalVar,0))}</td>
+      <td style="color:${totNet>=0?'var(--g)':'var(--r)'};">${totNet>=0?'+':''}${fmt(totNet)}</td>
+    </tr>
+  </table></div></div>`;
+  // Education annual
+  const eduA={};
+  for(const d of data){
+    for(const t of d.varTxns.filter(x=>x.cat==='edu')){
+      const k=t.sub||'其他';
+      eduA[k]=(eduA[k]||0)+t.amount;
+    }
+  }
+  if(Object.keys(eduA).length>0){
+    html+=`<div class="card"><div class="card-t">📚 年度教育費</div>`;
+    html+=Object.entries(eduA).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="fi2">
+      <div class="fn">${k}</div><div class="fa">${fmt(v)}</div>
+    </div>`).join('');
+    html+=`</div>`;
+  }
+  // Q comparison
+  const qData=[1,2,3,4].map(q=>{
+    const ms=[(q-1)*3+1,(q-1)*3+2,(q-1)*3+3];
+    const qd=ms.map(m=>data[m-1]);
+    return {q,inc:qd.reduce((s,d)=>s+d.totalInc,0),exp:qd.reduce((s,d)=>s+d.totalExp,0)};
+  });
+  html+=`<div class="card"><div class="card-t">🗓 季報摘要</div><div class="scroll-x"><table class="tbl">
+    <tr><th></th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th></tr>
+    <tr><td style="text-align:left;color:var(--g);">收入</td>${qData.map(q=>`<td>${fmt(q.inc)}</td>`).join('')}</tr>
+    <tr><td style="text-align:left;color:var(--r);">支出</td>${qData.map(q=>`<td>${fmt(q.exp)}</td>`).join('')}</tr>
+    <tr class="tot"><td style="text-align:left;">淨值</td>${qData.map(q=>`<td style="color:${q.inc-q.exp>=0?'var(--g)':'var(--r)'};">${q.inc-q.exp>=0?'+':''}${fmt(q.inc-q.exp)}</td>`).join('')}</tr>
+  </table></div></div>`;
+  // Export
+  html+=`<div class="card">
+    <div class="card-t">📤 匯出資料</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btng" onclick="exportCSV()">下載 CSV</button>
+      <button class="btn2" onclick="exportJSON()">備份 JSON</button>
+      <button class="btn2" onclick="importJSON()">還原 JSON</button>
+    </div>
+  </div>`;
+  el.innerHTML=html;
+  if(annChart){annChart.destroy();annChart=null;}
+  const ctx=document.getElementById('achart');
+  if(ctx){
+    annChart=new Chart(ctx,{type:'line',data:{
+      labels:MONTHS_TW,
+      datasets:[
+        {label:'收入',data:data.map(d=>d.totalInc),borderColor:'#10B981',backgroundColor:'rgba(16,185,129,0.1)',tension:0.3,fill:true},
+        {label:'支出',data:data.map(d=>d.totalExp),borderColor:'#EF4444',backgroundColor:'rgba(239,68,68,0.1)',tension:0.3,fill:true}
+      ]
+    },options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom'}}}});
+  }
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+// CREDIT CARD RECONCILIATION
+// ============================================================
+const LS_BILLS='apple_bills';
+
+// ── 信用卡卡片資訊 ────────────────────────────────────────────
+const CC_CARDS=[
+  {id:'rian_cube',  owner:'Rian', name:'國泰CUBE',   color:'#6366F1', due:'每月25日', benefits:'行動支付/網購3%回饋；一般消費0.2%；CUBE App消費點數加碼'},
+  {id:'jack_cube',  owner:'Jack', name:'國泰CUBE',   color:'#6366F1', due:'每月25日', benefits:'行動支付/網購3%回饋；一般消費0.2%；CUBE App消費點數加碼'},
+  {id:'rian_fubon', owner:'Rian', name:'富邦好市多', color:'#EF4444', due:'每月23日', benefits:'好市多消費2%現金回饋；海外消費1.5%；一般消費1%'},
+  {id:'jack_hsbc',  owner:'Jack', name:'匯豐卡',     color:'#CC2200', due:'每月20日', benefits:'指定通路現金回饋；海外消費2%；里程積累'},
+  {id:'jack_union', owner:'Jack', name:'聯邦卡',     color:'#0066CC', due:'每月25日', benefits:'網購/串流訂閱3%現金回饋；國內外一般消費1%'},
+];
+
+function getBills(){ try{return JSON.parse(localStorage.getItem(LS_BILLS)||'[]');}catch{return[];} }
+function saveBills(b){ localStorage.setItem(LS_BILLS,JSON.stringify(b)); }
+
+let ccYear=new Date().getFullYear();
+let ccMonth=0; // 0 = all months
+
+function setCCYear(y){ ccYear=y; renderCCPage(); }
+function setCCMonth(m){ ccMonth=m; renderCCPage(); }
+
+function populateCCFilter(){
+  const yrs=getAvailableYears();
+  const ySel=document.getElementById('cc-yr');
+  if(ySel) ySel.innerHTML=yrs.map(y=>`<option value="${y}"${y===ccYear?' selected':''}>${y}年</option>`).join('');
+  const mSel=document.getElementById('cc-mo');
+  if(mSel){
+    mSel.innerHTML=`<option value="0"${ccMonth===0?' selected':''}>全部月份</option>`+
+      Array.from({length:12},(_,i)=>`<option value="${i+1}"${ccMonth===i+1?' selected':''}>${i+1}月</option>`).join('');
+  }
+}
+
+function toggleReconcile(id){
+  const sid=String(id);
+  const txns=getTxns();
+  const t=txns.find(x=>String(x.id)===sid);
+  if(t) t.reconciled=!t.reconciled;
+  saveTxns(txns);
+  renderRecent();
+}
+
+
+function renderCCPage(){
+  const el=document.getElementById('cc-content');
+  if(!el) return;
+  populateCCFilter();
+  const bills=getBills();
+
+  // Months to display
+  const monthsToShow=ccMonth===0?Array.from({length:12},(_,i)=>i+1):[ccMonth];
+
+  let html=`<div class="card" style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:340px;">
+      <tr style="background:var(--p);color:white;">
+        <th style="padding:9px 10px;text-align:center;font-weight:600;">年</th>
+        <th style="padding:9px 10px;text-align:center;font-weight:600;">月</th>
+        <th style="padding:9px 10px;text-align:left;font-weight:600;">卡別</th>
+        <th style="padding:9px 10px;text-align:right;font-weight:600;">繳費金額</th>
+        <th style="padding:9px 10px;text-align:center;font-weight:600;">已繳費</th>
+      </tr>`;
+
+  let rowIdx=0;
+  for(const m of monthsToShow){
+    for(const c of CC_CARDS){
+      const key=`${c.id}_${ccYear}-${String(m).padStart(2,'0')}`;
+      const bill=bills.find(b=>b.month===key)||{billAmount:'',paid:false};
+      const bg=rowIdx%2===0?'':'background:var(--c1);';
+      html+=`<tr style="border-bottom:1px solid var(--c2);${bg}">
+        <td style="padding:8px 10px;text-align:center;color:var(--c5);">${ccYear}</td>
+        <td style="padding:8px 10px;text-align:center;color:var(--c5);white-space:nowrap;">${m}月</td>
+        <td style="padding:8px 10px;">
+          <span style="color:${c.color};font-weight:700;font-size:12px;">${c.owner}</span>
+          <span style="font-size:13px;"> ${c.name}</span>
+        </td>
+        <td style="padding:8px 10px;text-align:right;">
+          <input type="number" inputmode="numeric"
+            style="width:90px;border:1.5px solid var(--c3);border-radius:8px;padding:5px 8px;font-size:13px;text-align:right;font-family:inherit;"
+            placeholder="-" value="${bill.billAmount!=null&&bill.billAmount!==''?bill.billAmount:''}"
+            onchange="saveBillAmt('${key}',this.value)">
+        </td>
+        <td style="padding:8px 10px;text-align:center;">
+          <input type="checkbox" class="rec-check" ${bill.paid?'checked':''}
+            title="${bill.paid?'已繳費':'未繳費'}"
+            onchange="toggleBillPaid('${key}',this.checked)">
+        </td>
+      </tr>`;
+      rowIdx++;
+    }
+  }
+  html+=`</table></div>`;
+  el.innerHTML=html;
+}
+
+function toggleBillPaid(key,checked){
+  const bills=getBills();
+  const idx=bills.findIndex(b=>b.month===key);
+  if(idx>=0) bills[idx].paid=checked;
+  else bills.push({month:key,billAmount:0,paid:checked});
+  saveBills(bills);
+}
+
+function saveBillAmt(month,val){
+  const bills=getBills();
+  const idx=bills.findIndex(b=>b.month===month);
+  const amt=parseFloat(val)||0;
+  if(idx>=0) bills[idx].billAmount=amt;
+  else bills.push({month,billAmount:amt});
+  saveBills(bills);
+}
+
+// ============================================================
+function renderSettings(){
+  const s=getSettings();
+  const el=document.getElementById('settings-content');
+  let html=`<div class="card"><div class="card-t">📅 記帳年份</div>
+    <div class="sr">
+      <span>目前年份</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="btn2" onclick="changeYear(-1)">-</button>
+        <b id="yr-disp">${curYear}</b>
+        <button class="btn2" onclick="changeYear(1)">+</button>
+      </div>
+    </div>
+  </div>`;
+  // Fixed expenses
+  html+=`<div class="card"><div class="card-t">🔒 固定支出設定</div>`;
+  html+=s.fixedExpenses.map(fe=>`<div class="sr">
+    <div>
+      <div style="font-size:14px;font-weight:500;">${fe.name}</div>
+      <div style="font-size:12px;color:var(--c5);">${fe.type} · ${freqLabel(fe.freq)} · ${fmt(fe.amount)}</div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn2" onclick="editFE('${fe.id}')">編輯</button>
+      <button class="btnd" onclick="deleteFE('${fe.id}')">刪除</button>
+    </div>
+  </div>`).join('');
+  html+=`<button class="btng" style="margin-top:10px;" onclick="addFE()">＋ 新增固定支出</button></div>`;
+  // Income defaults
+  html+=`<div class="card"><div class="card-t">💰 收入預設</div>`;
+  html+=s.incomeDefaults.map(id_=>`<div class="sr">
+    <div>
+      <div style="font-size:14px;font-weight:500;">${id_.name}</div>
+      <div style="font-size:12px;color:var(--c5);">預設金額 ${fmt(id_.amount)}</div>
+    </div>
+    <button class="btnd" onclick="deleteIncDef('${id_.id}')">刪除</button>
+  </div>`).join('');
+  html+=`<button class="btng" style="margin-top:10px;" onclick="addIncDef()">＋ 新增收入預設</button></div>`;
+  // Data management
+  html+=`<div class="card"><div class="card-t">💾 資料管理</div>
+    <div class="sr"><span style="font-size:14px;">目前記錄筆數</span>
+      <span style="font-size:14px;font-weight:600;">${getTxns().length}筆支出 · ${getIncs().length}筆收入</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+      <button class="btng" onclick="loadHist2024()" title="載入 2024_expense 歷史記錄（234筆支出）">📥 載入2024歷史</button>
+      <button class="btng" onclick="loadHist2025()" title="載入 2025財務報表 歷史記錄（244筆支出）">📥 載入2025歷史</button>
+      <button class="btn2" onclick="exportCSV()">下載 CSV</button>
+      <button class="btn2" onclick="exportJSON()">備份 JSON</button>
+      <button class="btn2" onclick="importJSON()">還原 JSON</button>
+      <button class="btnd" onclick="clearAll()">清除全部資料</button>
+    </div>
+  </div>`;
+  // Google Drive sync card
+  const cid = getGClientId();
+  const gBadge = {'unlinked':'🔌 未登入','linked':'✅ 已同步','syncing':'🔄 同步中…','error':'⚠️ 失敗'}[gSyncStatus]||'🔌 未登入';
+  html+=`<div class="card">
+    <div class="card-t">☁️ Google Drive 同步
+      <span id="sync-badge" style="float:right;font-size:12px;font-weight:400;color:var(--c5);">${gBadge}</span>
+    </div>
+    <p style="font-size:13px;color:var(--c5);margin-bottom:12px;">登入後，可讀取雲端資料；記帳完畢後按畫面右下角的 <b>💾 存檔</b> 即可同步到 Google Drive。手機與電腦共用同一份資料。</p>
+    ${!cid ? `
+      <div style="margin-bottom:10px;">
+        <label style="font-size:13px;color:var(--c5);display:block;margin-bottom:6px;">🔑 Google OAuth Client ID</label>
+        <input id="gdrive-cid-input" type="text" placeholder="貼上 Client ID…" style="width:100%;padding:9px 12px;border:1px solid var(--c3);border-radius:8px;font-size:13px;margin-bottom:8px;">
+        <button class="btng" onclick="saveGClientIdFromInput()">儲存 Client ID</button>
+      </div>
+      <p style="font-size:12px;color:var(--c5);">📌 需要先到 <b>Google Cloud Console</b> 建立 OAuth 2.0 憑證（Web 類型），並把 App 網址加入授權來源。</p>
+    ` : `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+        ${gToken
+          ? `<button class="btn2" onclick="gLoadData()">📥 重新載入雲端資料</button>
+             <button class="btnd" onclick="gSignOut()">登出 Google</button>`
+          : `<button class="btng" onclick="gSignIn()">🔑 登入 Google</button>`
         }
-    }
+      </div>
+      ${gToken ? `<div style="font-size:12px;color:#10B981;margin-bottom:6px;">✅ 已連結 Google Drive</div>` : ''}
+      <a href="#" onclick="clearGClientId();return false;" style="font-size:12px;color:var(--c5);">重設 Client ID</a>
+    `}
+  </div>`;
+  html+=`<div style="text-align:center;font-size:12px;color:var(--c5);padding:16px;">蘋果家記帳 v1.2 · 資料儲存於本裝置 + Google Drive</div>`;
+  el.innerHTML=html;
+}
 
-    async function addRecord() {
-        const data = {
-            date: document.getElementById('dateInput').value,
-            item: document.getElementById('itemInput').value,
-            amount: document.getElementById('amountInput').value,
-            category: document.getElementById('categoryInput').value
-        };
+function changeYear(d){
+  curYear+=d;
+  curMonth=1;
+  document.getElementById('yr-disp')&&(document.getElementById('yr-disp').textContent=curYear);
+}
 
-        document.getElementById('status').innerText = "同步寫入中...";
-        // mode: 'no-cors' 確保手機瀏覽器也能正常送出資料至 Google Apps Script
-        await fetch(SCRIPT_URL, {
-            method: "POST",
-            mode: "no-cors",
-            body: JSON.stringify(data)
-        });
-        
-        document.getElementById('itemInput').value = '';
-        document.getElementById('amountInput').value = '';
-        fetchRecords();
-    }
+function freqLabel(f){
+  const m={monthly:'每月',bimonthly:'雙月','bimonthly-even':'雙月(偶)','bimonthly-odd':'雙月(奇)',quarterly:'季付',yearly:'每年'};
+  return m[f]||f;
+}
 
-    function renderTable() {
-        const body = document.getElementById('recordBody');
-        body.innerHTML = '';
-        records.slice().reverse().slice(0, 10).forEach(r => {
-            const row = `<tr><td>${r.date.split('T')[0]}</td><td>${r.item}</td><td>${r.amount}</td><td>${r.category}</td></tr>`;
-            body.innerHTML += row;
-        });
-    }
+function editFE(id){
+  const s=getSettings();
+  const fe=s.fixedExpenses.find(f=>f.id===id);
+  if(!fe) return;
+  openModal(`<div class="mt">編輯固定支出</div>
+    <div class="fg"><label class="fl">名稱</label><input class="fi" id="m-name" value="${fe.name}"></div>
+    <div class="fg"><label class="fl">金額</label><input class="fi" id="m-amt" type="number" value="${fe.amount}"></div>
+    <div class="fg"><label class="fl">類型</label>
+      <select class="fi" id="m-type">
+        <option value="固定支出"${fe.type==='固定支出'?' selected':''}>固定支出</option>
+        <option value="必要支出"${fe.type==='必要支出'?' selected':''}>必要支出</option>
+      </select></div>
+    <div class="fg"><label class="fl">頻率</label>
+      <select class="fi" id="m-freq">
+        <option value="monthly"${fe.freq==='monthly'?' selected':''}>每月</option>
+        <option value="bimonthly-even"${fe.freq==='bimonthly-even'?' selected':''}>雙月(偶數月)</option>
+        <option value="bimonthly-odd"${fe.freq==='bimonthly-odd'?' selected':''}>雙月(奇數月)</option>
+        <option value="quarterly"${fe.freq==='quarterly'?' selected':''}>每季</option>
+        <option value="yearly"${fe.freq==='yearly'?' selected':''}>每年(12月)</option>
+      </select></div>
+    <button class="btn1" onclick="saveFE('${id}')">儲存</button>`);
+}
 
-    fetchRecords();
+function saveFE(id){
+  const s=getSettings();
+  const fe=s.fixedExpenses.find(f=>f.id===id);
+  if(!fe) return;
+  fe.name=document.getElementById('m-name').value;
+  fe.amount=parseFloat(document.getElementById('m-amt').value)||0;
+  fe.type=document.getElementById('m-type').value;
+  fe.freq=document.getElementById('m-freq').value;
+  fe.note='';
+  saveSettings(s); closeModal(); renderSettings(); toast('✓ 已儲存');
+}
+
+function deleteFE(id){
+  if(!confirm('刪除此固定支出？')) return;
+  const s=getSettings();
+  s.fixedExpenses=s.fixedExpenses.filter(f=>f.id!==id);
+  saveSettings(s); renderSettings(); toast('已刪除');
+}
+
+function addFE(){
+  openModal(`<div class="mt">新增固定支出</div>
+    <div class="fg"><label class="fl">名稱</label><input class="fi" id="m-name" placeholder="例：房貸本金"></div>
+    <div class="fg"><label class="fl">金額</label><input class="fi" id="m-amt" type="number" placeholder="0"></div>
+    <div class="fg"><label class="fl">類型</label>
+      <select class="fi" id="m-type"><option value="固定支出">固定支出</option><option value="必要支出">必要支出</option></select></div>
+    <div class="fg"><label class="fl">頻率</label>
+      <select class="fi" id="m-freq">
+        <option value="monthly">每月</option>
+        <option value="bimonthly-even">雙月(偶數月)</option>
+        <option value="bimonthly-odd">雙月(奇數月)</option>
+        <option value="quarterly">每季</option>
+        <option value="yearly">每年(12月)</option>
+      </select></div>
+    <button class="btn1" onclick="confirmAddFE()">新增</button>`);
+}
+
+function confirmAddFE(){
+  const name=document.getElementById('m-name').value.trim();
+  if(!name){ toast('請輸入名稱'); return; }
+  const s=getSettings();
+  s.fixedExpenses.push({id:uid(),name,amount:parseFloat(document.getElementById('m-amt').value)||0,type:document.getElementById('m-type').value,freq:document.getElementById('m-freq').value,note:''});
+  saveSettings(s); closeModal(); renderSettings(); toast('✓ 已新增');
+}
+
+function addIncDef(){
+  openModal(`<div class="mt">新增收入預設</div>
+    <div class="fg"><label class="fl">名稱</label><input class="fi" id="m-name" placeholder="例：Jelian工作"></div>
+    <div class="fg"><label class="fl">預設金額</label><input class="fi" id="m-amt" type="number" placeholder="0"></div>
+    <button class="btn1" onclick="confirmAddIncDef()">新增</button>`);
+}
+
+function confirmAddIncDef(){
+  const name=document.getElementById('m-name').value.trim();
+  if(!name){ toast('請輸入名稱'); return; }
+  const s=getSettings();
+  s.incomeDefaults.push({id:uid(),name,amount:parseFloat(document.getElementById('m-amt').value)||0});
+  saveSettings(s); closeModal(); renderSettings(); toast('✓ 已新增');
+}
+
+function deleteIncDef(id){
+  if(!confirm('刪除？')) return;
+  const s=getSettings();
+  s.incomeDefaults=s.incomeDefaults.filter(i=>i.id!==id);
+  saveSettings(s); renderSettings(); toast('已刪除');
+}
+
+function clearAll(){
+  if(!confirm('確定要清除所有記帳資料？此操作無法復原！')) return;
+  if(!confirm('再次確認：清除所有資料？')) return;
+  localStorage.removeItem(LS_TXN);
+  localStorage.removeItem(LS_INC);
+  toast('已清除所有記帳資料');
+  renderSettings();
+  renderRecent();
+}
+
+// ============================================================
+// EXPORT / IMPORT
+// ============================================================
+function exportCSV(){
+  const txns=getTxns();
+  const incs=getIncs();
+  let csv='類型,日期,類別,子類別,項目,金額,備註\n';
+  for(const t of txns){
+    const cat=CAT_MAP[t.cat]||{label:t.cat};
+    csv+=`"${t.type==='fixed'?'固定支出':'支出'}","${t.date}","${cat.label}","${t.sub||''}","${(t.item||'').replace(/"/g,'""')}","${t.amount}","${(t.note||'').replace(/"/g,'""')}"\n`;
+  }
+  for(const i of incs){
+    csv+=`"收入","${i.date}","收入","","${i.source}","${i.amount}","${(i.note||'').replace(/"/g,'""')}"\n`;
+  }
+  download(csv,'text/csv;charset=utf-8',`蘋果家記帳_${curYear}.csv`);
+  toast('✓ CSV 已下載');
+}
+
+// ============================================================
+// 2024 HISTORICAL DATA IMPORT
+// ============================================================
+const HIST_2024 = {"txns":[{"id":1510000000001,"date":"2024-01-01","type":"expense","cat":"fixed","sub":"","item":"房貸本金+利息","amount":42005,"payment":"cash","_src":"2024歷史"},{"id":1510000000002,"date":"2024-01-01","type":"expense","cat":"fixed","sub":"","item":"水費","amount":520,"payment":"cash","_src":"2024歷史"},{"id":1510000000003,"date":"2024-01-01","type":"expense","cat":"fixed","sub":"","item":"電費","amount":1879,"payment":"cash","_src":"2024歷史"},{"id":1510000000004,"date":"2024-01-01","type":"expense","cat":"fixed","sub":"","item":"瓦斯費","amount":604,"payment":"cash","_src":"2024歷史"},{"id":1510000000005,"date":"2024-01-01","type":"expense","cat":"fixed","sub":"","item":"手機費","amount":1496,"payment":"cash","_src":"2024歷史"},{"id":1510000000006,"date":"2024-01-01","type":"expense","cat":"fixed","sub":"","item":"網路+串流費","amount":1015,"payment":"cash","_src":"2024歷史"},{"id":1510000000007,"date":"2024-01-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝","amount":2799,"payment":"cash","_src":"2024歷史"},{"id":1510000000008,"date":"2024-01-01","type":"expense","cat":"other","sub":"","item":"稅金+罰單","amount":915,"payment":"cash","_src":"2024歷史"},{"id":1510000000009,"date":"2024-01-01","type":"expense","cat":"fun","sub":"","item":"送禮+玩樂+停車","amount":3450,"payment":"cash","_src":"2024歷史"},{"id":1510000000010,"date":"2024-01-01","type":"expense","cat":"med","sub":"","item":"看診+保健食品","amount":5880,"payment":"cash","_src":"2024歷史"},{"id":1510000000011,"date":"2024-01-01","type":"expense","cat":"car","sub":"","item":"交通(聯邦悠遊卡)","amount":457,"payment":"cash","_src":"2024歷史"},{"id":1510000000012,"date":"2024-01-01","type":"expense","cat":"house","sub":"","item":"消費(遠東卡)","amount":26075,"payment":"cash","_src":"2024歷史"},{"id":1510000000013,"date":"2024-01-01","type":"expense","cat":"food","sub":"","item":"消費(富邦卡)","amount":4707,"payment":"cash","_src":"2024歷史"},{"id":1510000000014,"date":"2024-01-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝(匯豐卡)","amount":10607,"payment":"cash","_src":"2024歷史"},{"id":1510000000015,"date":"2024-01-01","type":"expense","cat":"house","sub":"","item":"消費(永豐卡)","amount":25692,"payment":"cash","_src":"2024歷史"},{"id":1510000000016,"date":"2024-01-01","type":"expense","cat":"edu","sub":"","item":"學用品+買書+辦證件","amount":1848,"payment":"cash","_src":"2024歷史"},{"id":1510000000017,"date":"2024-01-01","type":"expense","cat":"edu","sub":"","item":"小提琴+音樂","amount":4370,"payment":"cash","_src":"2024歷史"},{"id":1510000000018,"date":"2024-01-01","type":"expense","cat":"edu","sub":"","item":"數學課","amount":11200,"payment":"cash","_src":"2024歷史"},{"id":1510000000019,"date":"2024-01-01","type":"expense","cat":"car","sub":"","item":"車子保養+機車機油","amount":250,"payment":"cash","_src":"2024歷史"},{"id":1510000000020,"date":"2024-01-01","type":"expense","cat":"dress","sub":"","item":"剪髮染髮+保養品","amount":5600,"payment":"cash","_src":"2024歷史"},{"id":1510000000022,"date":"2024-02-01","type":"expense","cat":"fixed","sub":"","item":"房貸本金+利息","amount":42005,"payment":"cash","_src":"2024歷史"},{"id":1510000000023,"date":"2024-02-01","type":"expense","cat":"fixed","sub":"","item":"管理費","amount":5716,"payment":"cash","_src":"2024歷史"},{"id":1510000000024,"date":"2024-02-01","type":"expense","cat":"fixed","sub":"","item":"手機費","amount":1496,"payment":"cash","_src":"2024歷史"},{"id":1510000000025,"date":"2024-02-01","type":"expense","cat":"fixed","sub":"","item":"網路+串流費","amount":1015,"payment":"cash","_src":"2024歷史"},{"id":1510000000026,"date":"2024-02-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝","amount":72639,"payment":"cash","_src":"2024歷史"},{"id":1510000000027,"date":"2024-02-01","type":"expense","cat":"other","sub":"","item":"稅金+罰單","amount":3500,"payment":"cash","_src":"2024歷史"},{"id":1510000000028,"date":"2024-02-01","type":"expense","cat":"fun","sub":"","item":"送禮+玩樂+停車","amount":36413,"payment":"cash","_src":"2024歷史"},{"id":1510000000029,"date":"2024-02-01","type":"expense","cat":"med","sub":"","item":"看診+保健食品","amount":150,"payment":"cash","_src":"2024歷史"},{"id":1510000000030,"date":"2024-02-01","type":"expense","cat":"car","sub":"","item":"加油(國泰卡)","amount":476,"payment":"cash","_src":"2024歷史"},{"id":1510000000031,"date":"2024-02-01","type":"expense","cat":"car","sub":"","item":"交通(聯邦悠遊卡)","amount":152,"payment":"cash","_src":"2024歷史"},{"id":1510000000032,"date":"2024-02-01","type":"expense","cat":"house","sub":"","item":"消費(遠東卡)","amount":3784,"payment":"cash","_src":"2024歷史"},{"id":1510000000033,"date":"2024-02-01","type":"expense","cat":"food","sub":"","item":"消費(富邦卡)","amount":2242,"payment":"cash","_src":"2024歷史"},{"id":1510000000034,"date":"2024-02-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝(匯豐卡)","amount":39247,"payment":"cash","_src":"2024歷史"},{"id":1510000000035,"date":"2024-02-01","type":"expense","cat":"house","sub":"","item":"消費(永豐卡)","amount":1178,"payment":"cash","_src":"2024歷史"},{"id":1510000000036,"date":"2024-02-01","type":"expense","cat":"edu","sub":"","item":"學雜費+檢定考試","amount":2965,"payment":"cash","_src":"2024歷史"},{"id":1510000000037,"date":"2024-02-01","type":"expense","cat":"edu","sub":"","item":"學用品+買書+辦證件","amount":1024,"payment":"cash","_src":"2024歷史"},{"id":1510000000038,"date":"2024-02-01","type":"expense","cat":"edu","sub":"","item":"小提琴+音樂","amount":5400,"payment":"cash","_src":"2024歷史"},{"id":1510000000039,"date":"2024-02-01","type":"expense","cat":"edu","sub":"","item":"采詩集寫作課","amount":36900,"payment":"cash","_src":"2024歷史"},{"id":1510000000040,"date":"2024-02-01","type":"expense","cat":"car","sub":"","item":"車子保養+機車機油","amount":51000,"payment":"cash","_src":"2024歷史"},{"id":1510000000041,"date":"2024-02-01","type":"expense","cat":"dress","sub":"","item":"剪髮染髮+保養品","amount":1879,"payment":"cash","_src":"2024歷史"},{"id":1510000000043,"date":"2024-03-01","type":"expense","cat":"fixed","sub":"","item":"貸款利息","amount":24548,"payment":"cash","_src":"2024歷史"},{"id":1510000000044,"date":"2024-03-01","type":"expense","cat":"fixed","sub":"","item":"水費","amount":510,"payment":"cash","_src":"2024歷史"},{"id":1510000000045,"date":"2024-03-01","type":"expense","cat":"fixed","sub":"","item":"電費","amount":2373,"payment":"cash","_src":"2024歷史"},{"id":1510000000046,"date":"2024-03-01","type":"expense","cat":"fixed","sub":"","item":"瓦斯費","amount":932,"payment":"cash","_src":"2024歷史"},{"id":1510000000047,"date":"2024-03-01","type":"expense","cat":"fixed","sub":"","item":"保費","amount":24692,"payment":"cash","_src":"2024歷史"},{"id":1510000000048,"date":"2024-03-01","type":"expense","cat":"fixed","sub":"","item":"手機費","amount":1496,"payment":"cash","_src":"2024歷史"},{"id":1510000000049,"date":"2024-03-01","type":"expense","cat":"fixed","sub":"","item":"網路+串流費","amount":1015,"payment":"cash","_src":"2024歷史"},{"id":1510000000050,"date":"2024-03-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝","amount":2768,"payment":"cash","_src":"2024歷史"},{"id":1510000000051,"date":"2024-03-01","type":"expense","cat":"fun","sub":"","item":"送禮+玩樂+停車","amount":2000,"payment":"cash","_src":"2024歷史"},{"id":1510000000052,"date":"2024-03-01","type":"expense","cat":"car","sub":"","item":"加油(國泰卡)","amount":163,"payment":"cash","_src":"2024歷史"},{"id":1510000000053,"date":"2024-03-01","type":"expense","cat":"car","sub":"","item":"交通(聯邦悠遊卡)","amount":144,"payment":"cash","_src":"2024歷史"},{"id":1510000000054,"date":"2024-03-01","type":"expense","cat":"house","sub":"","item":"消費(遠東卡)","amount":1565,"payment":"cash","_src":"2024歷史"},{"id":1510000000055,"date":"2024-03-01","type":"expense","cat":"food","sub":"","item":"消費(富邦卡)","amount":2292,"payment":"cash","_src":"2024歷史"},{"id":1510000000056,"date":"2024-03-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝(匯豐卡)","amount":30556,"payment":"cash","_src":"2024歷史"},{"id":1510000000057,"date":"2024-03-01","type":"expense","cat":"food","sub":"","item":"餐費(LinePay)","amount":13974,"payment":"cash","_src":"2024歷史"},{"id":1510000000058,"date":"2024-03-01","type":"expense","cat":"house","sub":"","item":"消費(永豐卡)","amount":2845,"payment":"cash","_src":"2024歷史"},{"id":1510000000059,"date":"2024-03-01","type":"expense","cat":"edu","sub":"","item":"學雜費+檢定考試","amount":5830,"payment":"cash","_src":"2024歷史"},{"id":1510000000060,"date":"2024-03-01","type":"expense","cat":"edu","sub":"","item":"學用品+買書+辦證件","amount":1265,"payment":"cash","_src":"2024歷史"},{"id":1510000000061,"date":"2024-03-01","type":"expense","cat":"edu","sub":"","item":"小提琴+音樂","amount":5400,"payment":"cash","_src":"2024歷史"},{"id":1510000000062,"date":"2024-03-01","type":"expense","cat":"edu","sub":"","item":"平仔自然課","amount":4000,"payment":"cash","_src":"2024歷史"},{"id":1510000000063,"date":"2024-03-01","type":"expense","cat":"edu","sub":"","item":"數學課","amount":8800,"payment":"cash","_src":"2024歷史"},{"id":1510000000064,"date":"2024-03-01","type":"expense","cat":"car","sub":"","item":"車子保養+機車機油","amount":250,"payment":"cash","_src":"2024歷史"},{"id":1510000000065,"date":"2024-03-01","type":"expense","cat":"dress","sub":"","item":"剪髮染髮+保養品","amount":650,"payment":"cash","_src":"2024歷史"},{"id":1510000000066,"date":"2024-04-01","type":"expense","cat":"fixed","sub":"","item":"貸款利息","amount":24548,"payment":"cash","_src":"2024歷史"},{"id":1510000000067,"date":"2024-04-01","type":"expense","cat":"fixed","sub":"","item":"管理費","amount":5716,"payment":"cash","_src":"2024歷史"},{"id":1510000000068,"date":"2024-04-01","type":"expense","cat":"fixed","sub":"","item":"保費","amount":23000,"payment":"cash","_src":"2024歷史"},{"id":1510000000069,"date":"2024-04-01","type":"expense","cat":"fixed","sub":"","item":"手機費","amount":1496,"payment":"cash","_src":"2024歷史"},{"id":1510000000070,"date":"2024-04-01","type":"expense","cat":"fixed","sub":"","item":"網路+串流費","amount":1015,"payment":"cash","_src":"2024歷史"},{"id":1510000000071,"date":"2024-04-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝","amount":5849,"payment":"cash","_src":"2024歷史"},{"id":1510000000072,"date":"2024-04-01","type":"expense","cat":"other","sub":"","item":"稅金+罰單","amount":1200,"payment":"cash","_src":"2024歷史"},{"id":1510000000073,"date":"2024-04-01","type":"expense","cat":"fun","sub":"","item":"送禮+玩樂+停車","amount":620,"payment":"cash","_src":"2024歷史"},{"id":1510000000074,"date":"2024-04-01","type":"expense","cat":"med","sub":"","item":"看診+保健食品","amount":300,"payment":"cash","_src":"2024歷史"},{"id":1510000000075,"date":"2024-04-01","type":"expense","cat":"car","sub":"","item":"加油(國泰卡)","amount":330,"payment":"cash","_src":"2024歷史"},{"id":1510000000076,"date":"2024-04-01","type":"expense","cat":"car","sub":"","item":"交通(聯邦悠遊卡)","amount":169,"payment":"cash","_src":"2024歷史"},{"id":1510000000077,"date":"2024-04-01","type":"expense","cat":"house","sub":"","item":"消費(遠東卡)","amount":2030,"payment":"cash","_src":"2024歷史"},{"id":1510000000078,"date":"2024-04-01","type":"expense","cat":"food","sub":"","item":"消費(富邦卡)","amount":16405,"payment":"cash","_src":"2024歷史"},{"id":1510000000079,"date":"2024-04-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝(匯豐卡)","amount":11106,"payment":"cash","_src":"2024歷史"},{"id":1510000000080,"date":"2024-04-01","type":"expense","cat":"food","sub":"","item":"餐費(LinePay)","amount":2625,"payment":"cash","_src":"2024歷史"},{"id":1510000000081,"date":"2024-04-01","type":"expense","cat":"car","sub":"","item":"充電+保養(匯豐卡)","amount":5896,"payment":"cash","_src":"2024歷史"},{"id":1510000000082,"date":"2024-04-01","type":"expense","cat":"house","sub":"","item":"消費(永豐卡)","amount":1572,"payment":"cash","_src":"2024歷史"},{"id":1510000000083,"date":"2024-04-01","type":"expense","cat":"edu","sub":"","item":"學雜費+檢定考試","amount":2060,"payment":"cash","_src":"2024歷史"},{"id":1510000000084,"date":"2024-04-01","type":"expense","cat":"edu","sub":"","item":"學用品+買書+辦證件","amount":2136,"payment":"cash","_src":"2024歷史"},{"id":1510000000085,"date":"2024-04-01","type":"expense","cat":"edu","sub":"","item":"小提琴+音樂","amount":6700,"payment":"cash","_src":"2024歷史"},{"id":1510000000086,"date":"2024-04-01","type":"expense","cat":"edu","sub":"","item":"桌球+羽球+運動","amount":9000,"payment":"cash","_src":"2024歷史"},{"id":1510000000087,"date":"2024-04-01","type":"expense","cat":"edu","sub":"","item":"數學課","amount":8000,"payment":"cash","_src":"2024歷史"},{"id":1510000000088,"date":"2024-04-01","type":"expense","cat":"car","sub":"","item":"車子保養+機車機油","amount":250,"payment":"cash","_src":"2024歷史"},{"id":1510000000089,"date":"2024-04-01","type":"expense","cat":"dress","sub":"","item":"剪髮染髮+保養品","amount":6049,"payment":"cash","_src":"2024歷史"},{"id":1510000000090,"date":"2024-05-01","type":"expense","cat":"fixed","sub":"","item":"貸款利息","amount":24548,"payment":"cash","_src":"2024歷史"},{"id":1510000000091,"date":"2024-05-01","type":"expense","cat":"fixed","sub":"","item":"水費","amount":617,"payment":"cash","_src":"2024歷史"},{"id":1510000000092,"date":"2024-05-01","type":"expense","cat":"fixed","sub":"","item":"電費","amount":2489,"payment":"cash","_src":"2024歷史"},{"id":1510000000093,"date":"2024-05-01","type":"expense","cat":"fixed","sub":"","item":"瓦斯費","amount":812,"payment":"cash","_src":"2024歷史"},{"id":1510000000094,"date":"2024-05-01","type":"expense","cat":"fixed","sub":"","item":"手機費","amount":1496,"payment":"cash","_src":"2024歷史"},{"id":1510000000095,"date":"2024-05-01","type":"expense","cat":"fixed","sub":"","item":"網路+串流費","amount":2120,"payment":"cash","_src":"2024歷史"},{"id":1510000000096,"date":"2024-05-01","type":"expense","cat":"food","sub":"","item":"月餐費(現金/轉帳)","amount":14744,"payment":"cash","_src":"2024歷史"},{"id":1510000000097,"date":"2024-05-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝","amount":9465,"payment":"cash","_src":"2024歷史"},{"id":1510000000098,"date":"2024-05-01","type":"expense","cat":"other","sub":"","item":"稅金+罰單","amount":8128,"payment":"cash","_src":"2024歷史"},{"id":1510000000099,"date":"2024-05-01","type":"expense","cat":"fun","sub":"","item":"送禮+玩樂+停車","amount":80,"payment":"cash","_src":"2024歷史"},{"id":1510000000100,"date":"2024-05-01","type":"expense","cat":"med","sub":"","item":"看診+保健食品","amount":1250,"payment":"cash","_src":"2024歷史"},{"id":1510000000101,"date":"2024-05-01","type":"expense","cat":"car","sub":"","item":"加油(國泰卡)","amount":330,"payment":"cash","_src":"2024歷史"},{"id":1510000000102,"date":"2024-05-01","type":"expense","cat":"car","sub":"","item":"交通(聯邦悠遊卡)","amount":309,"payment":"cash","_src":"2024歷史"},{"id":1510000000103,"date":"2024-05-01","type":"expense","cat":"house","sub":"","item":"消費(遠東卡)","amount":2635,"payment":"cash","_src":"2024歷史"},{"id":1510000000104,"date":"2024-05-01","type":"expense","cat":"food","sub":"","item":"消費(富邦卡)","amount":4396,"payment":"cash","_src":"2024歷史"},{"id":1510000000105,"date":"2024-05-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝(匯豐卡)","amount":25542,"payment":"cash","_src":"2024歷史"},{"id":1510000000106,"date":"2024-05-01","type":"expense","cat":"food","sub":"","item":"餐費(LinePay)","amount":11096,"payment":"cash","_src":"2024歷史"},{"id":1510000000107,"date":"2024-05-01","type":"expense","cat":"car","sub":"","item":"充電+保養(匯豐卡)","amount":5670,"payment":"cash","_src":"2024歷史"},{"id":1510000000108,"date":"2024-05-01","type":"expense","cat":"house","sub":"","item":"消費(永豐卡)","amount":3180,"payment":"cash","_src":"2024歷史"},{"id":1510000000109,"date":"2024-05-01","type":"expense","cat":"edu","sub":"","item":"學用品+買書+辦證件","amount":1032,"payment":"cash","_src":"2024歷史"},{"id":1510000000110,"date":"2024-05-01","type":"expense","cat":"edu","sub":"","item":"小提琴+音樂","amount":7200,"payment":"cash","_src":"2024歷史"},{"id":1510000000111,"date":"2024-05-01","type":"expense","cat":"edu","sub":"","item":"數學課","amount":9100,"payment":"cash","_src":"2024歷史"},{"id":1510000000112,"date":"2024-05-01","type":"expense","cat":"dress","sub":"","item":"剪髮染髮+保養品","amount":7093,"payment":"cash","_src":"2024歷史"},{"id":1510000000113,"date":"2024-06-01","type":"expense","cat":"fixed","sub":"","item":"貸款利息","amount":24548,"payment":"cash","_src":"2024歷史"},{"id":1510000000114,"date":"2024-06-01","type":"expense","cat":"fixed","sub":"","item":"管理費","amount":5716,"payment":"cash","_src":"2024歷史"},{"id":1510000000115,"date":"2024-06-01","type":"expense","cat":"fixed","sub":"","item":"手機費","amount":1496,"payment":"cash","_src":"2024歷史"},{"id":1510000000116,"date":"2024-06-01","type":"expense","cat":"fixed","sub":"","item":"網路+串流費","amount":1561,"payment":"cash","_src":"2024歷史"},{"id":1510000000117,"date":"2024-06-01","type":"expense","cat":"food","sub":"","item":"月餐費(現金/轉帳)","amount":19316,"payment":"cash","_src":"2024歷史"},{"id":1510000000118,"date":"2024-06-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝","amount":2000,"payment":"cash","_src":"2024歷史"},{"id":1510000000119,"date":"2024-06-01","type":"expense","cat":"other","sub":"","item":"稅金+罰單","amount":4200,"payment":"cash","_src":"2024歷史"},{"id":1510000000120,"date":"2024-06-01","type":"expense","cat":"fun","sub":"","item":"送禮+玩樂+停車","amount":5000,"payment":"cash","_src":"2024歷史"},{"id":1510000000121,"date":"2024-06-01","type":"expense","cat":"car","sub":"","item":"交通(聯邦悠遊卡)","amount":474,"payment":"cash","_src":"2024歷史"},{"id":1510000000122,"date":"2024-06-01","type":"expense","cat":"house","sub":"","item":"消費(遠東卡)","amount":2935,"payment":"cash","_src":"2024歷史"},{"id":1510000000123,"date":"2024-06-01","type":"expense","cat":"food","sub":"","item":"消費(富邦卡)","amount":9388,"payment":"cash","_src":"2024歷史"},{"id":1510000000124,"date":"2024-06-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝(匯豐卡)","amount":24127,"payment":"cash","_src":"2024歷史"},{"id":1510000000125,"date":"2024-06-01","type":"expense","cat":"food","sub":"","item":"餐費(LinePay)","amount":3976,"payment":"cash","_src":"2024歷史"},{"id":1510000000126,"date":"2024-06-01","type":"expense","cat":"car","sub":"","item":"充電+保養(匯豐卡)","amount":6851,"payment":"cash","_src":"2024歷史"},{"id":1510000000127,"date":"2024-06-01","type":"expense","cat":"house","sub":"","item":"消費(永豐卡)","amount":1815,"payment":"cash","_src":"2024歷史"},{"id":1510000000128,"date":"2024-06-01","type":"expense","cat":"edu","sub":"","item":"學用品+買書+辦證件","amount":566,"payment":"cash","_src":"2024歷史"},{"id":1510000000129,"date":"2024-06-01","type":"expense","cat":"edu","sub":"","item":"小提琴+音樂","amount":7200,"payment":"cash","_src":"2024歷史"},{"id":1510000000130,"date":"2024-06-01","type":"expense","cat":"edu","sub":"","item":"數學課","amount":15300,"payment":"cash","_src":"2024歷史"},{"id":1510000000131,"date":"2024-06-01","type":"expense","cat":"car","sub":"","item":"車子保養+機車機油","amount":250,"payment":"cash","_src":"2024歷史"},{"id":1510000000132,"date":"2024-06-01","type":"expense","cat":"dress","sub":"","item":"剪髮染髮+保養品","amount":2550,"payment":"cash","_src":"2024歷史"},{"id":1510000000134,"date":"2024-07-01","type":"expense","cat":"fixed","sub":"","item":"貸款利息","amount":24548,"payment":"cash","_src":"2024歷史"},{"id":1510000000135,"date":"2024-07-01","type":"expense","cat":"fixed","sub":"","item":"水費","amount":580,"payment":"cash","_src":"2024歷史"},{"id":1510000000136,"date":"2024-07-01","type":"expense","cat":"fixed","sub":"","item":"電費","amount":2480,"payment":"cash","_src":"2024歷史"},{"id":1510000000137,"date":"2024-07-01","type":"expense","cat":"fixed","sub":"","item":"瓦斯費","amount":582,"payment":"cash","_src":"2024歷史"},{"id":1510000000138,"date":"2024-07-01","type":"expense","cat":"fixed","sub":"","item":"手機費","amount":1496,"payment":"cash","_src":"2024歷史"},{"id":1510000000139,"date":"2024-07-01","type":"expense","cat":"fixed","sub":"","item":"網路+串流費","amount":1015,"payment":"cash","_src":"2024歷史"},{"id":1510000000140,"date":"2024-07-01","type":"expense","cat":"food","sub":"","item":"月餐費(現金/轉帳)","amount":8777,"payment":"cash","_src":"2024歷史"},{"id":1510000000141,"date":"2024-07-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝","amount":2100,"payment":"cash","_src":"2024歷史"},{"id":1510000000142,"date":"2024-07-01","type":"expense","cat":"fun","sub":"","item":"送禮+玩樂+停車","amount":1200,"payment":"cash","_src":"2024歷史"},{"id":1510000000143,"date":"2024-07-01","type":"expense","cat":"car","sub":"","item":"交通(聯邦悠遊卡)","amount":464,"payment":"cash","_src":"2024歷史"},{"id":1510000000144,"date":"2024-07-01","type":"expense","cat":"house","sub":"","item":"消費(遠東卡)","amount":2050,"payment":"cash","_src":"2024歷史"},{"id":1510000000145,"date":"2024-07-01","type":"expense","cat":"food","sub":"","item":"消費(富邦卡)","amount":7237,"payment":"cash","_src":"2024歷史"},{"id":1510000000146,"date":"2024-07-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝(匯豐卡)","amount":17372,"payment":"cash","_src":"2024歷史"},{"id":1510000000147,"date":"2024-07-01","type":"expense","cat":"food","sub":"","item":"餐費(LinePay)","amount":4446,"payment":"cash","_src":"2024歷史"},{"id":1510000000148,"date":"2024-07-01","type":"expense","cat":"car","sub":"","item":"充電+保養(匯豐卡)","amount":9806,"payment":"cash","_src":"2024歷史"},{"id":1510000000149,"date":"2024-07-01","type":"expense","cat":"house","sub":"","item":"消費(永豐卡)","amount":2501,"payment":"cash","_src":"2024歷史"},{"id":1510000000150,"date":"2024-07-01","type":"expense","cat":"edu","sub":"","item":"學用品+買書+辦證件","amount":350,"payment":"cash","_src":"2024歷史"},{"id":1510000000151,"date":"2024-07-01","type":"expense","cat":"edu","sub":"","item":"小提琴+音樂","amount":7200,"payment":"cash","_src":"2024歷史"},{"id":1510000000152,"date":"2024-07-01","type":"expense","cat":"edu","sub":"","item":"桌球+羽球+運動","amount":5200,"payment":"cash","_src":"2024歷史"},{"id":1510000000153,"date":"2024-07-01","type":"expense","cat":"edu","sub":"","item":"書法課","amount":4800,"payment":"cash","_src":"2024歷史"},{"id":1510000000154,"date":"2024-07-01","type":"expense","cat":"edu","sub":"","item":"采詩集寫作課","amount":35000,"payment":"cash","_src":"2024歷史"},{"id":1510000000155,"date":"2024-07-01","type":"expense","cat":"car","sub":"","item":"車子保養+機車機油","amount":3070,"payment":"cash","_src":"2024歷史"},{"id":1510000000156,"date":"2024-07-01","type":"expense","cat":"dress","sub":"","item":"剪髮染髮+保養品","amount":700,"payment":"cash","_src":"2024歷史"},{"id":1510000000157,"date":"2024-08-01","type":"expense","cat":"fixed","sub":"","item":"貸款利息","amount":24548,"payment":"cash","_src":"2024歷史"},{"id":1510000000158,"date":"2024-08-01","type":"expense","cat":"house","sub":"","item":"洗衣儲值+雜誌費","amount":5000,"payment":"cash","_src":"2024歷史"},{"id":1510000000159,"date":"2024-08-01","type":"expense","cat":"fixed","sub":"","item":"管理費","amount":6570,"payment":"cash","_src":"2024歷史"},{"id":1510000000160,"date":"2024-08-01","type":"expense","cat":"fixed","sub":"","item":"手機費","amount":1496,"payment":"cash","_src":"2024歷史"},{"id":1510000000161,"date":"2024-08-01","type":"expense","cat":"fixed","sub":"","item":"網路+串流費","amount":1038,"payment":"cash","_src":"2024歷史"},{"id":1510000000162,"date":"2024-08-01","type":"expense","cat":"food","sub":"","item":"月餐費(現金/轉帳)","amount":14527,"payment":"cash","_src":"2024歷史"},{"id":1510000000163,"date":"2024-08-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝","amount":31790,"payment":"cash","_src":"2024歷史"},{"id":1510000000164,"date":"2024-08-01","type":"expense","cat":"fun","sub":"","item":"送禮+玩樂+停車","amount":12021,"payment":"cash","_src":"2024歷史"},{"id":1510000000165,"date":"2024-08-01","type":"expense","cat":"med","sub":"","item":"看診+保健食品","amount":300,"payment":"cash","_src":"2024歷史"},{"id":1510000000166,"date":"2024-08-01","type":"expense","cat":"car","sub":"","item":"交通(聯邦悠遊卡)","amount":445,"payment":"cash","_src":"2024歷史"},{"id":1510000000167,"date":"2024-08-01","type":"expense","cat":"house","sub":"","item":"消費(遠東卡)","amount":2055,"payment":"cash","_src":"2024歷史"},{"id":1510000000168,"date":"2024-08-01","type":"expense","cat":"food","sub":"","item":"消費(富邦卡)","amount":4990,"payment":"cash","_src":"2024歷史"},{"id":1510000000169,"date":"2024-08-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝(匯豐卡)","amount":80957,"payment":"cash","_src":"2024歷史"},{"id":1510000000170,"date":"2024-08-01","type":"expense","cat":"food","sub":"","item":"餐費(LinePay)","amount":12820,"payment":"cash","_src":"2024歷史"},{"id":1510000000171,"date":"2024-08-01","type":"expense","cat":"car","sub":"","item":"充電+保養(匯豐卡)","amount":7430,"payment":"cash","_src":"2024歷史"},{"id":1510000000172,"date":"2024-08-01","type":"expense","cat":"house","sub":"","item":"消費(永豐卡)","amount":2517,"payment":"cash","_src":"2024歷史"},{"id":1510000000173,"date":"2024-08-01","type":"expense","cat":"edu","sub":"","item":"學用品+買書+辦證件","amount":2500,"payment":"cash","_src":"2024歷史"},{"id":1510000000174,"date":"2024-08-01","type":"expense","cat":"edu","sub":"","item":"小提琴+音樂","amount":9000,"payment":"cash","_src":"2024歷史"},{"id":1510000000175,"date":"2024-08-01","type":"expense","cat":"edu","sub":"","item":"桌球+羽球+運動","amount":2600,"payment":"cash","_src":"2024歷史"},{"id":1510000000176,"date":"2024-08-01","type":"expense","cat":"edu","sub":"","item":"書法課","amount":4800,"payment":"cash","_src":"2024歷史"},{"id":1510000000177,"date":"2024-08-01","type":"expense","cat":"edu","sub":"","item":"采詩集寫作課","amount":13500,"payment":"cash","_src":"2024歷史"},{"id":1510000000178,"date":"2024-08-01","type":"expense","cat":"edu","sub":"","item":"數學課","amount":9600,"payment":"cash","_src":"2024歷史"},{"id":1510000000179,"date":"2024-08-01","type":"expense","cat":"car","sub":"","item":"車子保養+機車機油","amount":250,"payment":"cash","_src":"2024歷史"},{"id":1510000000180,"date":"2024-08-01","type":"expense","cat":"dress","sub":"","item":"剪髮染髮+保養品","amount":29090,"payment":"cash","_src":"2024歷史"},{"id":1510000000181,"date":"2024-09-01","type":"expense","cat":"fixed","sub":"","item":"貸款利息","amount":26477,"payment":"cash","_src":"2024歷史"},{"id":1510000000182,"date":"2024-09-01","type":"expense","cat":"fixed","sub":"","item":"水費","amount":511,"payment":"cash","_src":"2024歷史"},{"id":1510000000183,"date":"2024-09-01","type":"expense","cat":"fixed","sub":"","item":"電費","amount":3966,"payment":"cash","_src":"2024歷史"},{"id":1510000000184,"date":"2024-09-01","type":"expense","cat":"fixed","sub":"","item":"瓦斯費","amount":500,"payment":"cash","_src":"2024歷史"},{"id":1510000000185,"date":"2024-09-01","type":"expense","cat":"fixed","sub":"","item":"手機費","amount":1496,"payment":"cash","_src":"2024歷史"},{"id":1510000000186,"date":"2024-09-01","type":"expense","cat":"fixed","sub":"","item":"網路+串流費","amount":1015,"payment":"cash","_src":"2024歷史"},{"id":1510000000187,"date":"2024-09-01","type":"expense","cat":"food","sub":"","item":"月餐費(現金/轉帳)","amount":16954,"payment":"cash","_src":"2024歷史"},{"id":1510000000188,"date":"2024-09-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝","amount":6811,"payment":"cash","_src":"2024歷史"},{"id":1510000000189,"date":"2024-09-01","type":"expense","cat":"fun","sub":"","item":"送禮+玩樂+停車","amount":16000,"payment":"cash","_src":"2024歷史"},{"id":1510000000190,"date":"2024-09-01","type":"expense","cat":"car","sub":"","item":"交通(聯邦悠遊卡)","amount":162,"payment":"cash","_src":"2024歷史"},{"id":1510000000191,"date":"2024-09-01","type":"expense","cat":"house","sub":"","item":"消費(遠東卡)","amount":2495,"payment":"cash","_src":"2024歷史"},{"id":1510000000192,"date":"2024-09-01","type":"expense","cat":"food","sub":"","item":"消費(富邦卡)","amount":9864,"payment":"cash","_src":"2024歷史"},{"id":1510000000193,"date":"2024-09-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝(匯豐卡)","amount":8010,"payment":"cash","_src":"2024歷史"},{"id":1510000000194,"date":"2024-09-01","type":"expense","cat":"food","sub":"","item":"餐費(LinePay)","amount":2190,"payment":"cash","_src":"2024歷史"},{"id":1510000000195,"date":"2024-09-01","type":"expense","cat":"car","sub":"","item":"充電+保養(匯豐卡)","amount":7230,"payment":"cash","_src":"2024歷史"},{"id":1510000000196,"date":"2024-09-01","type":"expense","cat":"house","sub":"","item":"消費(永豐卡)","amount":2596,"payment":"cash","_src":"2024歷史"},{"id":1510000000197,"date":"2024-09-01","type":"expense","cat":"edu","sub":"","item":"學雜費+檢定考試","amount":20009,"payment":"cash","_src":"2024歷史"},{"id":1510000000198,"date":"2024-09-01","type":"expense","cat":"edu","sub":"","item":"學用品+買書+辦證件","amount":2330,"payment":"cash","_src":"2024歷史"},{"id":1510000000199,"date":"2024-09-01","type":"expense","cat":"edu","sub":"","item":"小提琴+音樂","amount":7200,"payment":"cash","_src":"2024歷史"},{"id":1510000000200,"date":"2024-09-01","type":"expense","cat":"edu","sub":"","item":"書法課","amount":4800,"payment":"cash","_src":"2024歷史"},{"id":1510000000201,"date":"2024-09-01","type":"expense","cat":"edu","sub":"","item":"數學課","amount":16000,"payment":"cash","_src":"2024歷史"},{"id":1510000000202,"date":"2024-09-01","type":"expense","cat":"edu","sub":"","item":"體態課程","amount":5100,"payment":"cash","_src":"2024歷史"},{"id":1510000000203,"date":"2024-09-01","type":"expense","cat":"dress","sub":"","item":"保養身體","amount":5100,"payment":"cash","_src":"2024歷史"},{"id":1510000000204,"date":"2024-09-01","type":"expense","cat":"dress","sub":"","item":"剪髮染髮+保養品","amount":2068,"payment":"cash","_src":"2024歷史"},{"id":1510000000206,"date":"2024-10-01","type":"expense","cat":"fixed","sub":"","item":"貸款利息","amount":25623,"payment":"cash","_src":"2024歷史"},{"id":1510000000207,"date":"2024-10-01","type":"expense","cat":"car","sub":"","item":"車子保險","amount":38240,"payment":"cash","_src":"2024歷史"},{"id":1510000000208,"date":"2024-10-01","type":"expense","cat":"house","sub":"","item":"洗衣儲值+雜誌費","amount":2600,"payment":"cash","_src":"2024歷史"},{"id":1510000000209,"date":"2024-10-01","type":"expense","cat":"fixed","sub":"","item":"管理費","amount":6570,"payment":"cash","_src":"2024歷史"},{"id":1510000000210,"date":"2024-10-01","type":"expense","cat":"fixed","sub":"","item":"手機費","amount":1496,"payment":"cash","_src":"2024歷史"},{"id":1510000000211,"date":"2024-10-01","type":"expense","cat":"fixed","sub":"","item":"網路+串流費","amount":1015,"payment":"cash","_src":"2024歷史"},{"id":1510000000212,"date":"2024-10-01","type":"expense","cat":"food","sub":"","item":"月餐費(現金/轉帳)","amount":2537,"payment":"cash","_src":"2024歷史"},{"id":1510000000213,"date":"2024-10-01","type":"expense","cat":"house","sub":"","item":"生活用品+治裝","amount":2300,"payment":"cash","_src":"2024歷史"},{"id":1510000000214,"date":"2024-10-01","type":"expense","cat":"car","sub":"","item":"加油(國泰卡)","amount":158,"payment":"cash","_src":"2024歷史"},{"id":1510000000215,"date":"2024-10-01","type":"expense","cat":"car","sub":"","item":"交通(聯邦悠遊卡)","amount":438,"payment":"cash","_src":"2024歷史"},{"id":1510000000216,"date":"2024-10-01","type":"expense","cat":"house","sub":"","item":"消費(遠東卡)","amount":2535,"payment":"cash","_src":"2024歷史"},{"id":1510000000217,"date":"2024-10-01","type":"expense","cat":"food","sub":"","item":"消費(富邦卡)","amount":10167,"payment":"cash","_src":"2024歷史"},{"id":1510000000218,"date":"2024-10-01","type":"expense","cat":"edu","sub":"","item":"書法課","amount":4800,"payment":"cash","_src":"2024歷史"},{"id":1510000000219,"date":"2024-10-01","type":"expense","cat":"edu","sub":"","item":"體態課程","amount":14000,"payment":"cash","_src":"2024歷史"},{"id":1510000000220,"date":"2024-10-01","type":"expense","cat":"car","sub":"","item":"車子保養+機車機油","amount":250,"payment":"cash","_src":"2024歷史"},{"id":1510000000221,"date":"2024-10-01","type":"expense","cat":"dress","sub":"","item":"保養身體","amount":10500,"payment":"cash","_src":"2024歷史"},{"id":1510000000222,"date":"2024-10-01","type":"expense","cat":"dress","sub":"","item":"剪髮染髮+保養品","amount":2300,"payment":"cash","_src":"2024歷史"},{"id":1510000000224,"date":"2024-11-01","type":"expense","cat":"fixed","sub":"","item":"貸款利息","amount":24548,"payment":"cash","_src":"2024歷史"},{"id":1510000000225,"date":"2024-11-01","type":"expense","cat":"house","sub":"","item":"洗衣儲值+雜誌費","amount":3999,"payment":"cash","_src":"2024歷史"},{"id":1510000000226,"date":"2024-11-01","type":"expense","cat":"fixed","sub":"","item":"手機費","amount":1496,"payment":"cash","_src":"2024歷史"},{"id":1510000000227,"date":"2024-11-01","type":"expense","cat":"fixed","sub":"","item":"網路+串流費","amount":1712,"payment":"cash","_src":"2024歷史"},{"id":1510000000228,"date":"2024-11-01","type":"expense","cat":"other","sub":"","item":"稅金+罰單","amount":478,"payment":"cash","_src":"2024歷史"},{"id":1510000000229,"date":"2024-11-01","type":"expense","cat":"edu","sub":"","item":"小提琴+音樂","amount":7200,"payment":"cash","_src":"2024歷史"},{"id":1510000000230,"date":"2024-11-01","type":"expense","cat":"dress","sub":"","item":"保養身體","amount":7200,"payment":"cash","_src":"2024歷史"},{"id":1510000000231,"date":"2024-12-01","type":"expense","cat":"fixed","sub":"","item":"貸款利息","amount":24548,"payment":"cash","_src":"2024歷史"},{"id":1510000000232,"date":"2024-12-01","type":"expense","cat":"fixed","sub":"","item":"管理費","amount":6570,"payment":"cash","_src":"2024歷史"},{"id":1510000000233,"date":"2024-12-01","type":"expense","cat":"fixed","sub":"","item":"保費","amount":25421,"payment":"cash","_src":"2024歷史"},{"id":1510000000234,"date":"2024-12-01","type":"expense","cat":"fixed","sub":"","item":"手機費","amount":1496,"payment":"cash","_src":"2024歷史"},{"id":1510000000235,"date":"2024-12-01","type":"expense","cat":"fixed","sub":"","item":"網路+串流費","amount":1015,"payment":"cash","_src":"2024歷史"},{"id":1510000000236,"date":"2024-12-01","type":"expense","cat":"edu","sub":"","item":"書法課","amount":4800,"payment":"cash","_src":"2024歷史"},{"id":1510000000237,"date":"2024-12-01","type":"expense","cat":"edu","sub":"","item":"數學課","amount":9600,"payment":"cash","_src":"2024歷史"},{"id":1510000000238,"date":"2024-12-01","type":"expense","cat":"dress","sub":"","item":"保養身體","amount":1800,"payment":"cash","_src":"2024歷史"},{"id":1510000000239,"date":"2024-12-01","type":"expense","cat":"dress","sub":"","item":"剪髮染髮+保養品","amount":2100,"payment":"cash","_src":"2024歷史"}],"incs":[{"id":1510000000021,"date":"2024-01-01","source":"額外收入","amount":19312,"note":"","_src":"2024歷史"},{"id":1510000000042,"date":"2024-02-01","source":"額外收入","amount":1500,"note":"","_src":"2024歷史"},{"id":1510000000133,"date":"2024-06-01","source":"額外收入","amount":3275,"note":"","_src":"2024歷史"},{"id":1510000000205,"date":"2024-09-01","source":"額外收入","amount":200,"note":"","_src":"2024歷史"},{"id":1510000000223,"date":"2024-10-01","source":"額外收入","amount":800,"note":"","_src":"2024歷史"}]};
+
+function loadHist2024(){
+  const existing = getTxns();
+  const existIds = new Set(existing.map(t=>String(t.id)));
+  const newTxns  = HIST_2024.txns.filter(t=>!existIds.has(String(t.id)));
+
+  const existIncs = getIncs();
+  const existIncIds = new Set(existIncs.map(i=>String(i.id)));
+  const newIncs   = HIST_2024.incs.filter(i=>!existIncIds.has(String(i.id)));
+
+  if(newTxns.length===0 && newIncs.length===0){
+    toast('✅ 2024 歷史資料已全部載入，無重複');
+    return;
+  }
+  saveTxns([...existing, ...newTxns]);
+  saveIncs([...existIncs, ...newIncs]);
+  toast(`✅ 已載入 ${newTxns.length} 筆支出、${newIncs.length} 筆收入`);
+  renderSettings();
+  renderRecent();
+}
+
+// ============================================================
+// 2025 HISTORICAL DATA IMPORT
+// ============================================================
+const HIST_2025 = {"txns":[{"id":1620000000001,"date":"2025-01-01","type":"expense","cat":"dress","sub":"","item":"衣服","amount":27086,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000002,"date":"2025-01-01","type":"expense","cat":"food","sub":"","item":"飲食","amount":15396,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000003,"date":"2025-01-01","type":"expense","cat":"edu","sub":"","item":"書法+文具","amount":6000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000004,"date":"2025-01-01","type":"expense","cat":"med","sub":"","item":"醫療相關","amount":271,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000007,"date":"2025-02-01","type":"expense","cat":"edu","sub":"","item":"數學+三民學費","amount":22120,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000008,"date":"2025-02-01","type":"expense","cat":"food","sub":"","item":"飲食","amount":9014,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000009,"date":"2025-02-01","type":"expense","cat":"fun","sub":"","item":"娛樂聚餐","amount":3500,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000010,"date":"2025-02-01","type":"expense","cat":"dress","sub":"","item":"衣服 ","amount":1200,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000011,"date":"2025-02-01","type":"expense","cat":"other","sub":"","item":"罰單","amount":600,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000014,"date":"2025-03-01","type":"expense","cat":"food","sub":"","item":"飲食","amount":6433,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000015,"date":"2025-03-01","type":"expense","cat":"med","sub":"","item":"保健食品","amount":4725,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000016,"date":"2025-03-01","type":"expense","cat":"dress","sub":"","item":"打掃","amount":2300,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000017,"date":"2025-03-01","type":"expense","cat":"edu","sub":"","item":"買書","amount":1636,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000020,"date":"2025-04-01","type":"expense","cat":"food","sub":"","item":"飲食","amount":39430,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000021,"date":"2025-04-01","type":"expense","cat":"edu","sub":"","item":"進修學習","amount":23440,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000022,"date":"2025-04-01","type":"expense","cat":"dress","sub":"","item":"治裝保養","amount":1500,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000023,"date":"2025-04-01","type":"expense","cat":"house","sub":"","item":"生活用品","amount":7789,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000024,"date":"2025-04-01","type":"expense","cat":"med","sub":"","item":"保健食品","amount":5460,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000025,"date":"2025-04-01","type":"expense","cat":"fun","sub":"","item":"剪髮","amount":1400,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000026,"date":"2025-04-01","type":"expense","cat":"gift","sub":"","item":"納瓦爾寶典","amount":1232,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000030,"date":"2025-05-01","type":"expense","cat":"food","sub":"","item":"飲食","amount":10575,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000031,"date":"2025-05-01","type":"expense","cat":"fun","sub":"","item":"娛樂聚餐","amount":2803,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000032,"date":"2025-05-01","type":"expense","cat":"car","sub":"","item":"車子相關","amount":850,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000033,"date":"2025-05-01","type":"expense","cat":"gift","sub":"","item":"送禮","amount":810,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000034,"date":"2025-05-01","type":"expense","cat":"med","sub":"","item":"醫療相關","amount":300,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000035,"date":"2025-05-01","type":"expense","cat":"edu","sub":"","item":"進修學習","amount":100,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000039,"date":"2025-06-01","type":"expense","cat":"edu","sub":"","item":"進修學習","amount":49470,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000040,"date":"2025-06-01","type":"expense","cat":"food","sub":"","item":"飲食","amount":14193,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000041,"date":"2025-06-01","type":"expense","cat":"fun","sub":"","item":"娛樂聚餐","amount":6957,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000042,"date":"2025-06-01","type":"expense","cat":"gift","sub":"","item":"送禮","amount":3746,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000043,"date":"2025-06-01","type":"expense","cat":"dress","sub":"","item":"治裝保養","amount":2380,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000044,"date":"2025-06-01","type":"expense","cat":"fun","sub":"","item":"娛樂聚餐","amount":1346,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000045,"date":"2025-06-01","type":"expense","cat":"med","sub":"","item":"醫療相關","amount":600,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000046,"date":"2025-06-01","type":"expense","cat":"car","sub":"","item":"充電","amount":4257,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000050,"date":"2025-07-01","type":"expense","cat":"edu","sub":"","item":"進修學習","amount":20000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000051,"date":"2025-07-01","type":"expense","cat":"food","sub":"","item":"飲食","amount":13727,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000052,"date":"2025-07-01","type":"expense","cat":"dress","sub":"","item":"治裝保養","amount":4057,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000053,"date":"2025-07-01","type":"expense","cat":"fun","sub":"","item":"娛樂聚餐","amount":2340,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000054,"date":"2025-07-01","type":"expense","cat":"fun","sub":"","item":"娛樂聚餐","amount":1600,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000055,"date":"2025-07-01","type":"expense","cat":"gift","sub":"","item":"送禮","amount":990,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000056,"date":"2025-07-01","type":"expense","cat":"car","sub":"","item":"充電","amount":5651,"payment":"other2","note":"","_src":"2025歷史"},{"id":1620000000060,"date":"2025-08-01","type":"expense","cat":"food","sub":"","item":"記帳","amount":15469,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000061,"date":"2025-08-01","type":"expense","cat":"edu","sub":"","item":"記帳","amount":7154,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000062,"date":"2025-08-01","type":"expense","cat":"fun","sub":"","item":"記帳","amount":3350,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000063,"date":"2025-08-01","type":"expense","cat":"house","sub":"","item":"記帳","amount":2104,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000064,"date":"2025-08-01","type":"expense","cat":"gift","sub":"","item":"父親節紅包","amount":2000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000065,"date":"2025-08-01","type":"expense","cat":"dress","sub":"","item":"打掃","amount":1500,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000067,"date":"2025-08-10","type":"expense","cat":"dress","sub":"","item":"安麗濾心","amount":4800,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000068,"date":"2025-08-10","type":"expense","cat":"gift","sub":"","item":"安麗濾心-爸媽","amount":4800,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000066,"date":"2025-08-20","type":"expense","cat":"car","sub":"","item":"換馬牌輪胎","amount":40000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000070,"date":"2025-08-22","type":"expense","cat":"car","sub":"","item":"充電","amount":5556,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000069,"date":"2025-08-23","type":"expense","cat":"dress","sub":"","item":"衣樂智儲值","amount":5000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000085,"date":"2025-09-01","type":"expense","cat":"edu","sub":"","item":"三民學費","amount":2893,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000084,"date":"2025-09-02","type":"expense","cat":"food","sub":"","item":"食材-鴨胸","amount":320,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000083,"date":"2025-09-03","type":"expense","cat":"food","sub":"","item":"水果+麵包","amount":1416,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000082,"date":"2025-09-04","type":"expense","cat":"house","sub":"","item":"保護手機-Jelian","amount":2182,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000080,"date":"2025-09-07","type":"expense","cat":"food","sub":"","item":"飲料、麵包","amount":1025,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000081,"date":"2025-09-07","type":"expense","cat":"gift","sub":"","item":"麵包-二表姊","amount":440,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000078,"date":"2025-09-09","type":"expense","cat":"edu","sub":"","item":"果兒學費","amount":1500,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000079,"date":"2025-09-09","type":"expense","cat":"dress","sub":"","item":"Rian染髮","amount":2000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000077,"date":"2025-09-10","type":"expense","cat":"food","sub":"","item":"全聯食材","amount":250,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000075,"date":"2025-09-11","type":"expense","cat":"food","sub":"","item":"食材-鴨胸","amount":640,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000074,"date":"2025-09-12","type":"expense","cat":"car","sub":"","item":"機油","amount":250,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000091,"date":"2025-09-13","type":"expense","cat":"house","sub":"","item":"好事多-食材","amount":3710,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000100,"date":"2025-09-13","type":"expense","cat":"house","sub":"","item":"行李箱","amount":8373,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000101,"date":"2025-09-13","type":"expense","cat":"dress","sub":"","item":"皮夾","amount":1071,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000102,"date":"2025-09-13","type":"expense","cat":"dress","sub":"","item":"addidas","amount":2904,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000103,"date":"2025-09-13","type":"expense","cat":"dress","sub":"","item":"Calvin Klein","amount":3072,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000104,"date":"2025-09-13","type":"expense","cat":"gift","sub":"","item":"Under Armour-爸媽","amount":4915,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000105,"date":"2025-09-14","type":"expense","cat":"gift","sub":"","item":"SEE's Candy","amount":1941,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000086,"date":"2025-09-15","type":"expense","cat":"edu","sub":"","item":"班費","amount":2000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000087,"date":"2025-09-15","type":"expense","cat":"food","sub":"","item":"點心食材","amount":759,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000088,"date":"2025-09-16","type":"expense","cat":"food","sub":"","item":"食材","amount":277,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000089,"date":"2025-09-17","type":"expense","cat":"food","sub":"","item":"EGG 網市水餃","amount":820,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000097,"date":"2025-09-18","type":"expense","cat":"edu","sub":"","item":"果兒學費","amount":410,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000098,"date":"2025-09-18","type":"expense","cat":"edu","sub":"","item":"平仔學費","amount":11950,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000099,"date":"2025-09-18","type":"expense","cat":"food","sub":"","item":"全聯食材","amount":412,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000096,"date":"2025-09-19","type":"expense","cat":"food","sub":"","item":"水果+麵包","amount":985,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000106,"date":"2025-09-19","type":"expense","cat":"car","sub":"","item":"換機車輪胎","amount":1100,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000092,"date":"2025-09-21","type":"expense","cat":"house","sub":"","item":"好事多","amount":948,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000093,"date":"2025-09-21","type":"expense","cat":"food","sub":"","item":"好市多-食材","amount":2724,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000094,"date":"2025-09-21","type":"expense","cat":"food","sub":"","item":"egg-學長","amount":600,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000095,"date":"2025-09-21","type":"expense","cat":"house","sub":"","item":"好市多隱形眼鏡藥水","amount":569,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000118,"date":"2025-09-21","type":"expense","cat":"food","sub":"","item":"好市多-食材","amount":2098,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000107,"date":"2025-09-22","type":"expense","cat":"car","sub":"","item":"充電","amount":4540,"payment":"other2","note":"","_src":"2025歷史"},{"id":1620000000076,"date":"2025-09-24","type":"expense","cat":"food","sub":"","item":"好事多","amount":2724,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000090,"date":"2025-09-24","type":"expense","cat":"dress","sub":"","item":"CLEAN","amount":1500,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000108,"date":"2025-09-25","type":"expense","cat":"house","sub":"","item":"球拍穿線","amount":350,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000109,"date":"2025-09-25","type":"expense","cat":"gift","sub":"","item":"不二家","amount":1200,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000110,"date":"2025-09-25","type":"expense","cat":"food","sub":"","item":"不二家","amount":600,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000111,"date":"2025-09-26","type":"expense","cat":"food","sub":"","item":"炸雞排","amount":180,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000112,"date":"2025-09-27","type":"expense","cat":"dress","sub":"","item":"髮膠","amount":1280,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000113,"date":"2025-09-27","type":"expense","cat":"house","sub":"","item":"Apple watch","amount":5900,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000114,"date":"2025-09-27","type":"expense","cat":"house","sub":"","item":"Apple watch-膜","amount":841,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000115,"date":"2025-09-27","type":"expense","cat":"house","sub":"","item":"Apple watch-殼","amount":790,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000116,"date":"2025-09-27","type":"expense","cat":"dress","sub":"","item":"剪髮","amount":700,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000117,"date":"2025-09-28","type":"expense","cat":"food","sub":"","item":"野上","amount":1040,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000119,"date":"2025-09-29","type":"expense","cat":"dress","sub":"","item":"LULU運動褲","amount":1980,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000120,"date":"2025-09-29","type":"expense","cat":"house","sub":"","item":"Muji收納櫃","amount":1980,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000121,"date":"2025-09-29","type":"expense","cat":"food","sub":"","item":"一人燒肉","amount":1590,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000122,"date":"2025-09-29","type":"expense","cat":"dress","sub":"","item":"襪子-aPure","amount":3294,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000123,"date":"2025-09-29","type":"expense","cat":"food","sub":"","item":"麥當勞","amount":402,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000125,"date":"2025-09-29","type":"expense","cat":"food","sub":"","item":"飲料零食","amount":326,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000124,"date":"2025-09-30","type":"expense","cat":"food","sub":"","item":"大嬸婆窯烤麵包","amount":410,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000126,"date":"2025-09-30","type":"expense","cat":"house","sub":"","item":"平仔錶帶","amount":790,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000130,"date":"2025-10-01","type":"expense","cat":"food","sub":"","item":"LessonOne","amount":370,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000142,"date":"2025-10-02","type":"expense","cat":"car","sub":"","item":"加油","amount":141,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000131,"date":"2025-10-03","type":"expense","cat":"edu","sub":"","item":"拳氧代課學費","amount":100,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000132,"date":"2025-10-04","type":"expense","cat":"house","sub":"","item":"拼圖裱框","amount":3970,"payment":"other2","note":"","_src":"2025歷史"},{"id":1620000000133,"date":"2025-10-04","type":"expense","cat":"food","sub":"","item":"晚餐-巨城","amount":1480,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000134,"date":"2025-10-04","type":"expense","cat":"food","sub":"","item":"林家油飯","amount":630,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000135,"date":"2025-10-04","type":"expense","cat":"edu","sub":"","item":"臆數課本","amount":250,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000136,"date":"2025-10-06","type":"expense","cat":"food","sub":"","item":"飲料-五分鐘+御私藏","amount":155,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000137,"date":"2025-10-06","type":"expense","cat":"house","sub":"","item":"好市多-燈泡","amount":1024,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000138,"date":"2025-10-06","type":"expense","cat":"food","sub":"","item":"8+8早餐","amount":250,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000139,"date":"2025-10-06","type":"expense","cat":"edu","sub":"","item":"AMC10","amount":700,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000140,"date":"2025-10-06","type":"expense","cat":"food","sub":"","item":"好市多-食材","amount":1768,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000143,"date":"2025-10-07","type":"expense","cat":"food","sub":"","item":"烏魚子","amount":600,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000144,"date":"2025-10-08","type":"expense","cat":"food","sub":"","item":"豪食餛飩*4","amount":600,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000141,"date":"2025-10-09","type":"expense","cat":"food","sub":"","item":"脈衝軟糖","amount":905,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000145,"date":"2025-10-09","type":"expense","cat":"food","sub":"","item":"波奇波奇","amount":460,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000146,"date":"2025-10-09","type":"expense","cat":"food","sub":"","item":"能量軟糖","amount":905,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000147,"date":"2025-10-09","type":"expense","cat":"food","sub":"","item":"能量膠","amount":547,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000148,"date":"2025-10-10","type":"expense","cat":"dress","sub":"","item":"平仔剪髮","amount":700,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000149,"date":"2025-10-10","type":"expense","cat":"dress","sub":"","item":"美甲","amount":720,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000150,"date":"2025-10-10","type":"expense","cat":"food","sub":"","item":"晚餐-麥當勞","amount":411,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000151,"date":"2025-10-11","type":"expense","cat":"food","sub":"","item":"早餐-咖啡羊行","amount":130,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000152,"date":"2025-10-12","type":"expense","cat":"food","sub":"","item":"毋肉1999","amount":780,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000153,"date":"2025-10-12","type":"expense","cat":"house","sub":"","item":"九乘九","amount":280,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000154,"date":"2025-10-13","type":"expense","cat":"food","sub":"","item":"地瓜+蔥抓餅","amount":180,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000155,"date":"2025-10-14","type":"expense","cat":"food","sub":"","item":"囍瑞橄欖油*12(3033)","amount":1733,"payment":"cube","note":"","_src":"2025歷史"},{"id":1620000000156,"date":"2025-10-15","type":"expense","cat":"fun","sub":"","item":"MNA迪士尼音樂會","amount":7250,"payment":"other2","note":"","_src":"2025歷史"},{"id":1620000000157,"date":"2025-10-15","type":"expense","cat":"house","sub":"","item":"蝦皮*馬拉松瓷釦*3","amount":402,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000158,"date":"2025-10-15","type":"expense","cat":"dress","sub":"","item":"clean","amount":1500,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000159,"date":"2025-10-16","type":"expense","cat":"food","sub":"","item":"百香果","amount":620,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000160,"date":"2025-10-16","type":"expense","cat":"med","sub":"","item":"看臻品-平仔","amount":150,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000161,"date":"2025-10-16","type":"expense","cat":"gift","sub":"","item":"百香果","amount":480,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000162,"date":"2025-10-16","type":"expense","cat":"food","sub":"","item":"關東包子","amount":146,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000163,"date":"2025-10-16","type":"expense","cat":"edu","sub":"","item":"平仔隔宿露營","amount":3300,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000164,"date":"2025-10-18","type":"expense","cat":"dress","sub":"","item":"法國精華液*2","amount":2966,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000165,"date":"2025-10-18","type":"expense","cat":"fun","sub":"","item":"Jellycat","amount":4114,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000166,"date":"2025-10-18","type":"expense","cat":"fun","sub":"","item":"Jo malone","amount":7815,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000167,"date":"2025-10-18","type":"expense","cat":"dress","sub":"","item":"衣服","amount":5280,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000168,"date":"2025-10-18","type":"expense","cat":"dress","sub":"","item":"果兒禮服","amount":3652,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000169,"date":"2025-10-18","type":"expense","cat":"food","sub":"","item":"裕私藏","amount":140,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000170,"date":"2025-10-18","type":"expense","cat":"food","sub":"","item":"鬥牛士-巨成七樓","amount":2719,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000171,"date":"2025-10-18","type":"expense","cat":"house","sub":"","item":"隱形眼鏡-好市多","amount":8577,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000172,"date":"2025-10-18","type":"expense","cat":"gift","sub":"","item":"益生菌給婆婆","amount":639,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000173,"date":"2025-10-18","type":"expense","cat":"food","sub":"","item":"好市多-餐","amount":357,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000174,"date":"2025-10-18","type":"expense","cat":"house","sub":"","item":"好市多","amount":4661,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000175,"date":"2025-10-19","type":"expense","cat":"car","sub":"","item":"加油","amount":141,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000176,"date":"2025-10-19","type":"expense","cat":"edu","sub":"","item":"金欣物理","amount":16000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000177,"date":"2025-10-19","type":"expense","cat":"edu","sub":"","item":"文具-琴弦","amount":2650,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000178,"date":"2025-10-19","type":"expense","cat":"food","sub":"","item":"皇膳湯包","amount":270,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000179,"date":"2025-10-19","type":"expense","cat":"food","sub":"","item":"蛋","amount":600,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000180,"date":"2025-10-20","type":"expense","cat":"food","sub":"","item":"壽司","amount":50,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000181,"date":"2025-10-22","type":"expense","cat":"food","sub":"","item":"蘋果+薪石窯","amount":899,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000182,"date":"2025-10-24","type":"expense","cat":"food","sub":"","item":"西大發+50蘭潤餅+樂揚食堂","amount":1242,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000183,"date":"2025-10-24","type":"expense","cat":"edu","sub":"","item":"小科學費","amount":19800,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000184,"date":"2025-10-24","type":"expense","cat":"fun","sub":"","item":"3C-耳機","amount":998,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000185,"date":"2025-10-25","type":"expense","cat":"food","sub":"","item":"薪石窯+好市多食材","amount":3650,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000186,"date":"2025-10-25","type":"expense","cat":"edu","sub":"","item":"文具-換弓毛","amount":2000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000187,"date":"2025-10-26","type":"expense","cat":"food","sub":"","item":"麥當勞+飲料+竹美","amount":2246,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000188,"date":"2025-10-27","type":"expense","cat":"food","sub":"","item":"澎湖海鮮","amount":960,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000189,"date":"2025-10-28","type":"expense","cat":"dress","sub":"","item":"伊萊克斯耗材","amount":1026,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000190,"date":"2025-10-29","type":"expense","cat":"car","sub":"","item":"換機油","amount":250,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000191,"date":"2025-10-29","type":"expense","cat":"food","sub":"","item":"羅宋麵包","amount":259,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000192,"date":"2025-10-30","type":"expense","cat":"food","sub":"","item":"全聯蛋+椒麻師傅","amount":291,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000193,"date":"2025-10-31","type":"expense","cat":"food","sub":"","item":"漢王薑母鴨+食材","amount":1032,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000194,"date":"2025-10-31","type":"expense","cat":"food","sub":"","item":"主婦-紅蘿蔔汁","amount":330,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000198,"date":"2025-11-01","type":"expense","cat":"food","sub":"","item":"洪瑞珍+麥當勞","amount":896,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000199,"date":"2025-11-01","type":"expense","cat":"edu","sub":"","item":"APP-SPEAK","amount":3490,"payment":"other2","note":"","_src":"2025歷史"},{"id":1620000000200,"date":"2025-11-01","type":"expense","cat":"edu","sub":"","item":"臆數-24","amount":19800,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000201,"date":"2025-11-02","type":"expense","cat":"dress","sub":"","item":"Jack haircut","amount":700,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000202,"date":"2025-11-02","type":"expense","cat":"dress","sub":"","item":"innisfree","amount":305,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000203,"date":"2025-11-02","type":"expense","cat":"food","sub":"","item":"御私藏","amount":140,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000204,"date":"2025-11-03","type":"expense","cat":"food","sub":"","item":"全聯食材+點心","amount":1082,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000205,"date":"2025-11-04","type":"expense","cat":"food","sub":"","item":"馬芬+貝果","amount":729,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000206,"date":"2025-11-05","type":"expense","cat":"dress","sub":"","item":"打掃","amount":1500,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000207,"date":"2025-11-05","type":"expense","cat":"food","sub":"","item":"食材+蛋黃酥","amount":960,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000208,"date":"2025-11-06","type":"expense","cat":"house","sub":"","item":"I17pro配件","amount":2682,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000209,"date":"2025-11-06","type":"expense","cat":"car","sub":"","item":"過路費","amount":1490,"payment":"other2","note":"","_src":"2025歷史"},{"id":1620000000210,"date":"2025-11-06","type":"expense","cat":"fun","sub":"","item":"萬金石馬拉松","amount":1070,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000211,"date":"2025-11-06","type":"expense","cat":"edu","sub":"","item":"拳擊有氧課","amount":300,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000212,"date":"2025-11-06","type":"expense","cat":"gift","sub":"","item":"傳情小卡","amount":560,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000213,"date":"2025-11-07","type":"expense","cat":"food","sub":"","item":"牛舌+福成雞肉飯","amount":520,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000214,"date":"2025-11-07","type":"expense","cat":"fun","sub":"","item":"美甲","amount":1000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000215,"date":"2025-11-07","type":"expense","cat":"house","sub":"","item":"I17PRO手機","amount":38052,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000216,"date":"2025-11-07","type":"expense","cat":"dress","sub":"","item":"水光","amount":15000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000217,"date":"2025-11-08","type":"expense","cat":"food","sub":"","item":"好事多","amount":2846,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000218,"date":"2025-11-09","type":"expense","cat":"gift","sub":"","item":"送皮拉老師","amount":760,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000219,"date":"2025-11-09","type":"expense","cat":"food","sub":"","item":"AMO蛋糕","amount":380,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000220,"date":"2025-11-09","type":"expense","cat":"food","sub":"","item":"晚餐食材飲料","amount":1290,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000221,"date":"2025-11-10","type":"expense","cat":"edu","sub":"","item":"竹女學習","amount":725,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000222,"date":"2025-11-11","type":"expense","cat":"edu","sub":"","item":"南寮游泳","amount":50,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000223,"date":"2025-11-11","type":"expense","cat":"med","sub":"","item":"看醫生","amount":400,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000224,"date":"2025-11-11","type":"expense","cat":"food","sub":"","item":"大魯閣 陳瑩老師","amount":503,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000225,"date":"2025-11-12","type":"expense","cat":"food","sub":"","item":"百香果","amount":950,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000226,"date":"2025-11-13","type":"expense","cat":"car","sub":"","item":"充電","amount":2910,"payment":"other2","note":"","_src":"2025歷史"},{"id":1620000000227,"date":"2025-11-13","type":"expense","cat":"dress","sub":"","item":"露露黑長褲","amount":5280,"payment":"other2","note":"","_src":"2025歷史"},{"id":1620000000228,"date":"2025-11-13","type":"expense","cat":"food","sub":"","item":"麥當勞線上點餐","amount":540,"payment":"other2","note":"","_src":"2025歷史"},{"id":1620000000229,"date":"2025-11-13","type":"expense","cat":"edu","sub":"","item":"菁輔課程","amount":2543,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000230,"date":"2025-11-13","type":"expense","cat":"food","sub":"","item":"小木屋鬆餅","amount":260,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000231,"date":"2025-11-14","type":"expense","cat":"food","sub":"","item":"香菇粉+滿美+主婦","amount":848,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000232,"date":"2025-11-15","type":"expense","cat":"food","sub":"","item":"鮮奶茶+台西鵝肉+蛋","amount":2065,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000233,"date":"2025-11-15","type":"expense","cat":"dress","sub":"","item":"迪卡農用品","amount":1197,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000234,"date":"2025-11-16","type":"expense","cat":"house","sub":"","item":"蝦皮:室內拖鞋","amount":487,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000235,"date":"2025-11-16","type":"expense","cat":"food","sub":"","item":"蝦皮:芝初","amount":347,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000236,"date":"2025-11-16","type":"expense","cat":"fun","sub":"","item":"disney+","amount":3280,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000237,"date":"2025-11-17","type":"expense","cat":"food","sub":"","item":"全聯食材+點心","amount":986,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000238,"date":"2025-11-17","type":"expense","cat":"house","sub":"","item":"匯豐卡","amount":7018,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000239,"date":"2025-11-18","type":"expense","cat":"edu","sub":"","item":"平仔數學家教","amount":18000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000240,"date":"2025-11-19","type":"expense","cat":"food","sub":"","item":"明太子+鹹糕","amount":1468,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000241,"date":"2025-11-19","type":"expense","cat":"dress","sub":"","item":"蝦皮:護髮素洗髮精","amount":2237,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000242,"date":"2025-11-20","type":"expense","cat":"food","sub":"","item":"食堂+炒飯+哈密瓜","amount":805,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000243,"date":"2025-11-22","type":"expense","cat":"food","sub":"","item":"好市多","amount":4507,"payment":"other2","note":"","_src":"2025歷史"},{"id":1620000000244,"date":"2025-11-23","type":"expense","cat":"food","sub":"","item":"晚餐飲料","amount":386,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000245,"date":"2025-11-23","type":"expense","cat":"gift","sub":"","item":"家族聚餐","amount":2000,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000246,"date":"2025-11-24","type":"expense","cat":"food","sub":"","item":"酪梨油","amount":898,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000247,"date":"2025-11-26","type":"expense","cat":"food","sub":"","item":"薪石窯","amount":170,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000248,"date":"2025-11-26","type":"expense","cat":"gift","sub":"","item":"哈密瓜給公婆","amount":367,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000249,"date":"2025-11-27","type":"expense","cat":"dress","sub":"","item":"打掃","amount":1500,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000250,"date":"2025-11-27","type":"expense","cat":"food","sub":"","item":"62窯烤+里仁+貝果+排骨片","amount":1074,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000251,"date":"2025-11-28","type":"expense","cat":"fun","sub":"","item":"染髮","amount":2050,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000252,"date":"2025-11-28","type":"expense","cat":"food","sub":"","item":"林聰明","amount":470,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000253,"date":"2025-11-29","type":"expense","cat":"food","sub":"","item":"全聯食材+點心","amount":806,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000254,"date":"2025-11-29","type":"expense","cat":"car","sub":"","item":"洗車","amount":140,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000255,"date":"2025-11-30","type":"expense","cat":"food","sub":"","item":"小佐藤","amount":200,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000258,"date":"2025-12-01","type":"expense","cat":"food","sub":"","item":"食材:PIZZA+鴨腿","amount":1065,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000259,"date":"2025-12-01","type":"expense","cat":"house","sub":"","item":"3M羽絨被胎","amount":16710,"payment":"cube","note":"","_src":"2025歷史"},{"id":1620000000260,"date":"2025-12-01","type":"expense","cat":"house","sub":"","item":"埃及棉床包","amount":13700,"payment":"cube","note":"","_src":"2025歷史"},{"id":1620000000261,"date":"2025-12-01","type":"expense","cat":"food","sub":"","item":"御私藏+小鵲幸","amount":240,"payment":"cube","note":"","_src":"2025歷史"},{"id":1620000000262,"date":"2025-12-01","type":"expense","cat":"edu","sub":"","item":"果兒泳衣","amount":3480,"payment":"cube","note":"","_src":"2025歷史"},{"id":1620000000257,"date":"2025-12-02","type":"expense","cat":"edu","sub":"","item":"采詩集","amount":13500,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000263,"date":"2025-12-02","type":"expense","cat":"edu","sub":"","item":"平仔AMC","amount":700,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000264,"date":"2025-12-03","type":"expense","cat":"food","sub":"","item":"全聯+百香果+剝皮辣椒","amount":2077,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000265,"date":"2025-12-04","type":"expense","cat":"food","sub":"","item":"厚片土司","amount":110,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000266,"date":"2025-12-04","type":"expense","cat":"dress","sub":"","item":"發熱衣","amount":810,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000267,"date":"2025-12-05","type":"expense","cat":"food","sub":"","item":"主婦","amount":455,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000268,"date":"2025-12-06","type":"expense","cat":"food","sub":"","item":"小佐藤","amount":950,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000269,"date":"2025-12-06","type":"expense","cat":"gift","sub":"","item":"酪梨油*2給婆婆","amount":898,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000270,"date":"2025-12-07","type":"expense","cat":"food","sub":"","item":"台北基隆2天","amount":2435,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000271,"date":"2025-12-07","type":"expense","cat":"fun","sub":"","item":"永康街禮品","amount":648,"payment":"cash","note":"","_src":"2025歷史"},{"id":1620000000272,"date":"2025-12-08","type":"expense","cat":"dress","sub":"","item":"剪髮-Jack","amount":700,"payment":"cash","note":"","_src":"2025歷史"}],"incs":[{"id":1620000000005,"date":"2025-01-01","source":"薪資收入","amount":150000,"note":"","_src":"2025歷史"},{"id":1620000000006,"date":"2025-01-01","source":"投資配息","amount":12707,"note":"","_src":"2025歷史"},{"id":1620000000012,"date":"2025-02-01","source":"薪資收入","amount":150000,"note":"","_src":"2025歷史"},{"id":1620000000013,"date":"2025-02-01","source":"投資配息","amount":19986,"note":"","_src":"2025歷史"},{"id":1620000000018,"date":"2025-03-01","source":"薪資收入","amount":173790,"note":"","_src":"2025歷史"},{"id":1620000000019,"date":"2025-03-01","source":"投資配息","amount":15106,"note":"","_src":"2025歷史"},{"id":1620000000027,"date":"2025-04-01","source":"薪資收入","amount":150000,"note":"","_src":"2025歷史"},{"id":1620000000028,"date":"2025-04-01","source":"投資配息","amount":12603,"note":"","_src":"2025歷史"},{"id":1620000000029,"date":"2025-04-01","source":"其他收入","amount":27983,"note":"","_src":"2025歷史"},{"id":1620000000036,"date":"2025-05-01","source":"薪資收入","amount":200000,"note":"","_src":"2025歷史"},{"id":1620000000037,"date":"2025-05-01","source":"投資配息","amount":14035,"note":"","_src":"2025歷史"},{"id":1620000000038,"date":"2025-05-01","source":"其他收入","amount":25626,"note":"","_src":"2025歷史"},{"id":1620000000047,"date":"2025-06-01","source":"薪資收入","amount":130000,"note":"","_src":"2025歷史"},{"id":1620000000048,"date":"2025-06-01","source":"投資配息","amount":12926,"note":"","_src":"2025歷史"},{"id":1620000000049,"date":"2025-06-01","source":"其他收入","amount":19851,"note":"","_src":"2025歷史"},{"id":1620000000057,"date":"2025-07-01","source":"薪資收入","amount":110000,"note":"","_src":"2025歷史"},{"id":1620000000058,"date":"2025-07-01","source":"投資配息","amount":20895,"note":"","_src":"2025歷史"},{"id":1620000000059,"date":"2025-07-01","source":"其他收入","amount":24576,"note":"","_src":"2025歷史"},{"id":1620000000071,"date":"2025-08-01","source":"薪資收入","amount":150000,"note":"","_src":"2025歷史"},{"id":1620000000072,"date":"2025-08-01","source":"投資配息","amount":45241,"note":"","_src":"2025歷史"},{"id":1620000000073,"date":"2025-08-01","source":"其他收入","amount":21531,"note":"","_src":"2025歷史"},{"id":1620000000127,"date":"2025-09-01","source":"薪資收入","amount":180000,"note":"","_src":"2025歷史"},{"id":1620000000128,"date":"2025-09-01","source":"投資配息","amount":22010,"note":"","_src":"2025歷史"},{"id":1620000000129,"date":"2025-09-01","source":"其他收入","amount":26361,"note":"","_src":"2025歷史"},{"id":1620000000195,"date":"2025-10-01","source":"薪資收入","amount":150000,"note":"","_src":"2025歷史"},{"id":1620000000196,"date":"2025-10-01","source":"投資配息","amount":7257,"note":"","_src":"2025歷史"},{"id":1620000000197,"date":"2025-10-01","source":"其他收入","amount":24051,"note":"","_src":"2025歷史"},{"id":1620000000256,"date":"2025-11-01","source":"薪資收入","amount":150000,"note":"","_src":"2025歷史"},{"id":1620000000273,"date":"2025-12-01","source":"薪資收入","amount":150000,"note":"","_src":"2025歷史"}]};
+
+function loadHist2025(){
+  const existing = getTxns();
+  const existIds = new Set(existing.map(t=>String(t.id)));
+  const newTxns  = HIST_2025.txns.filter(t=>!existIds.has(String(t.id)));
+
+  const existIncs = getIncs();
+  const existIncIds = new Set(existIncs.map(i=>String(i.id)));
+  const newIncs   = HIST_2025.incs.filter(i=>!existIncIds.has(String(i.id)));
+
+  if(newTxns.length===0 && newIncs.length===0){
+    toast('✅ 2025 歷史資料已全部載入，無重複');
+    return;
+  }
+  saveTxns([...existing, ...newTxns]);
+  saveIncs([...existIncs, ...newIncs]);
+  toast(`✅ 已載入 ${newTxns.length} 筆支出、${newIncs.length} 筆收入`);
+  renderSettings();
+  renderRecent();
+}
+
+function exportJSON(){
+  const data={txns:getTxns(),incs:getIncs(),settings:getSettings(),exported:new Date().toISOString()};
+  download(JSON.stringify(data,null,2),'application/json',`蘋果家記帳備份_${todayStr()}.json`);
+  toast('✓ 備份已下載');
+}
+
+function importJSON(){
+  const input=document.createElement('input');
+  input.type='file'; input.accept='.json';
+  input.onchange=e=>{
+    const f=e.target.files[0];
+    if(!f) return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const d=JSON.parse(ev.target.result);
+        if(d.txns) saveTxns(d.txns);
+        if(d.incs) saveIncs(d.incs);
+        if(d.settings) saveSettings(d.settings);
+        toast('✓ 資料已還原');
+        renderSettings();
+        renderRecent();
+      }catch{toast('⚠️ 檔案格式錯誤');}
+    };
+    r.readAsText(f);
+  };
+  input.click();
+}
+
+function download(content, mime, filename){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+content],{type:mime}));
+  a.download=filename;
+  a.click();
+}
+
+// ============================================================
+// MODAL / TOAST UTILS
+// ============================================================
+function openModal(html){
+  document.getElementById('modal-sheet').innerHTML=html;
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(e){
+  if(!e||e.target===document.getElementById('modal'))
+    document.getElementById('modal').classList.remove('show');
+}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function fmt(n){
+  if(!n) return '0';
+  return Math.abs(n).toLocaleString('zh-TW');
+}
+function todayStr(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderEntryForm();
+document.getElementById('month-display').textContent=`${curYear}年 ${MONTHS_TW[curMonth-1]}`;
+// Init Google Drive after GIS loads
+(function tryInitGDrive(){
+  if(window.google?.accounts?.oauth2){ initGDrive(); }
+  else { setTimeout(tryInitGDrive, 400); }
+})();
 </script>
 </body>
 </html>
