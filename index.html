@@ -774,13 +774,14 @@ async function exportQuarterlyToExcel(){
 const GDRIVE_FILE_NAME = 'apple_budget_data.json';
 const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
 const LS_GDRIVE_CID = 'apple_gdrive_cid';
+const GDRIVE_CLIENT_ID_DEFAULT = '617984798305-ie4697usvtj7pnnqoo2fnmv5p44k4i15.apps.googleusercontent.com';
 
 let gToken = null;
 let gFileId = null;
 let gTokenClient = null;
 let gSyncStatus = 'unlinked'; // unlinked | linked | syncing | error
 
-function getGClientId(){ return localStorage.getItem(LS_GDRIVE_CID)||''; }
+function getGClientId(){ return localStorage.getItem(LS_GDRIVE_CID)||GDRIVE_CLIENT_ID_DEFAULT; }
 function saveGClientId(v){ localStorage.setItem(LS_GDRIVE_CID, v.trim()); }
 
 function initGDrive(){
@@ -893,6 +894,7 @@ async function gSaveData(){
     }
     gSyncStatus = 'linked'; updateSyncBadge();
     toast('✅ 已存檔到 Google Drive');
+    renderCurrentScreen();
   }catch(e){
     console.warn('gSaveData',e);
     gSyncStatus = 'error'; updateSyncBadge();
@@ -2293,31 +2295,20 @@ function renderSettings(){
     </div>
   </div>`;
   // Google Drive sync card
-  const cid = getGClientId();
   const gBadge = {'unlinked':'🔌 未登入','linked':'✅ 已同步','syncing':'🔄 同步中…','error':'⚠️ 失敗'}[gSyncStatus]||'🔌 未登入';
   html+=`<div class="card">
     <div class="card-t">☁️ Google Drive 同步
       <span id="sync-badge" style="float:right;font-size:12px;font-weight:400;color:var(--c5);">${gBadge}</span>
     </div>
     <p style="font-size:13px;color:var(--c5);margin-bottom:12px;">登入後，可讀取雲端資料；記帳完畢後按畫面右下角的 <b>💾 存檔</b> 即可同步到 Google Drive。手機與電腦共用同一份資料。</p>
-    ${!cid ? `
-      <div style="margin-bottom:10px;">
-        <label style="font-size:13px;color:var(--c5);display:block;margin-bottom:6px;">🔑 Google OAuth Client ID</label>
-        <input id="gdrive-cid-input" type="text" placeholder="貼上 Client ID…" style="width:100%;padding:9px 12px;border:1px solid var(--c3);border-radius:8px;font-size:13px;margin-bottom:8px;">
-        <button class="btng" onclick="saveGClientIdFromInput()">儲存 Client ID</button>
-      </div>
-      <p style="font-size:12px;color:var(--c5);">📌 需要先到 <b>Google Cloud Console</b> 建立 OAuth 2.0 憑證（Web 類型），並把 App 網址加入授權來源。</p>
-    ` : `
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-        ${gToken
-          ? `<button class="btn2" onclick="gLoadData()">📥 重新載入雲端資料</button>
-             <button class="btnd" onclick="gSignOut()">登出 Google</button>`
-          : `<button class="btng" onclick="gSignIn()">🔑 登入 Google</button>`
-        }
-      </div>
-      ${gToken ? `<div style="font-size:12px;color:#10B981;margin-bottom:6px;">✅ 已連結 Google Drive</div>` : ''}
-      <a href="#" onclick="clearGClientId();return false;" style="font-size:12px;color:var(--c5);">重設 Client ID</a>
-    `}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+      ${gToken
+        ? `<button class="btn2" onclick="gLoadData()">📥 重新載入雲端資料</button>
+           <button class="btnd" onclick="gSignOut()">登出 Google</button>`
+        : `<button class="btng" onclick="gSignIn()">🔑 登入 Google</button>`
+      }
+    </div>
+    ${gToken ? `<div style="font-size:12px;color:#10B981;">✅ 已連結 Google Drive</div>` : ''}
   </div>`;
   html+=`<div style="text-align:center;font-size:12px;color:var(--c5);padding:16px;">蘋果家記帳 v1.2 · 資料儲存於本裝置 + Google Drive</div>`;
   el.innerHTML=html;
