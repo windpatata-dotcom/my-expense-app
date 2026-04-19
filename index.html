@@ -270,7 +270,10 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 </div>
 
 <div id="s-creditcard" class="screen">
-  <div class="screen-header">信用卡對帳 💳</div>
+  <div class="screen-header" style="display:flex;justify-content:space-between;align-items:center;">
+    <span>信用卡對帳 💳</span>
+    <button class="btng" onclick="gSaveData()" style="font-size:13px;padding:6px 12px;">💾 存檔</button>
+  </div>
   <div id="cc-filter" class="ym-filter">
     <label>年份</label>
     <select id="cc-yr" onchange="setCCYear(+this.value)"></select>
@@ -1363,6 +1366,13 @@ function submitEntry(){
     setAmt(0);
   }
   renderRecent();
+  if(document.activeElement) document.activeElement.blur();
+  setTimeout(()=>{
+    const el=document.getElementById('recent-list');
+    if(!el) return;
+    const y=el.getBoundingClientRect().top + window.scrollY - 8;
+    window.scrollTo({top:y, behavior:'smooth'});
+  }, 350);
 }
 
 let recentFilterYear=new Date().getFullYear(), recentFilterMonth=new Date().getMonth()+1;
@@ -2601,18 +2611,4 @@ function fmt(n){
 }
 function todayStr(){
   const d=new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
-// ============================================================
-// INIT
-// ============================================================
-renderEntryForm();
-document.getElementById('month-display').textContent=`${curYear}年 ${MONTHS_TW[curMonth-1]}`;
-(function tryInitGDrive(){
-  if(window.google?.accounts?.oauth2){ initGDrive(); gAutoSignIn(); }
-  else { setTimeout(tryInitGDrive, 400); }
-})();
-</script>
-</body>
-</html>
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(
