@@ -774,13 +774,15 @@ async function exportQuarterlyToExcel(){
 const GDRIVE_FILE_NAME = 'apple_budget_data.json';
 const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
 const LS_GDRIVE_CID = 'apple_gdrive_cid';
-const LS_GDRIVE_FID = 'apple_gdrive_fid'; // shared file ID override
+const LS_GDRIVE_FID = 'apple_gdrive_fid';
 const GDRIVE_CLIENT_ID_DEFAULT = '617984798305-ie4697usvtj7pnnqoo2fnmv5p44k4i15.apps.googleusercontent.com';
+const GDRIVE_FILE_ID_DEFAULT = '17U88o-ywylpvnB7RhIFmxh67LwY4LUKF'; // 共用記帳資料
 
 let gToken = null;
-let gFileId = localStorage.getItem(LS_GDRIVE_FID)||null;
+let gFileId = GDRIVE_FILE_ID_DEFAULT || localStorage.getItem(LS_GDRIVE_FID) || null;
 let gTokenClient = null;
 let gSyncStatus = 'unlinked'; // unlinked | linked | syncing | error
+let gSilentLogin = false; // suppress error toast during auto-login
 
 function getGClientId(){ return localStorage.getItem(LS_GDRIVE_CID)||GDRIVE_CLIENT_ID_DEFAULT; }
 function saveGClientId(v){ localStorage.setItem(LS_GDRIVE_CID, v.trim()); }
@@ -793,13 +795,36 @@ function initGDrive(){
       client_id: cid,
       scope: GDRIVE_SCOPE,
       callback: async (resp) => {
-        if(resp.error){ gSyncStatus='error'; updateSyncBadge(); toast('⚠️ 登入失敗：'+resp.error); return; }
+        if(resp.error){
+          if(!gSilentLogin){ gSyncStatus='error'; updateSyncBadge(); toast('⚠️ 登入失敗：'+resp.error); }
+          gSilentLogin = false;
+          return;
+        }
+        gSilentLogin = false;
         gToken = resp.access_token;
+        localStorage.setItem(LS_LAST_LOGIN, Date.now().toString());
         gSyncStatus = 'linked'; updateSyncBadge(); updateSaveBtnVisibility();
         await gLoadData();
+        showScreen('entry');
       }
     });
   }catch(e){ console.warn('initGDrive',e); }
+}
+
+const LS_LAST_LOGIN = 'apple_last_login';
+const AUTO_LOGIN_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 天
+
+async function gAutoSignIn(){
+  // Check if last login was within 30 days
+  const last = parseInt(localStorage.getItem(LS_LAST_LOGIN)||'0');
+  if(Date.now() - last > AUTO_LOGIN_EXPIRY_MS) return; // expired, require manual login
+  // Silent login — no popup, works if user already authorized before
+  const cid = getGClientId();
+  if(!cid || !window.google?.accounts?.oauth2) return;
+  if(!gTokenClient) initGDrive();
+  if(!gTokenClient) return;
+  gSilentLogin = true;
+  gTokenClient.requestAccessToken({ prompt:'' });
 }
 
 async function gSignIn(){
@@ -820,7 +845,8 @@ function gSignOut(){
 }
 
 async function gFindFile(){
-  // Use stored file ID if available
+  // Use hardcoded default first, then localStorage
+  if(GDRIVE_FILE_ID_DEFAULT) return GDRIVE_FILE_ID_DEFAULT;
   const stored = localStorage.getItem(LS_GDRIVE_FID);
   if(stored) return stored;
   // Search by name
@@ -2326,36 +2352,22 @@ function renderSettings(){
   </div>`;
   // Google Drive sync card
   const gBadge = {'unlinked':'🔌 未登入','linked':'✅ 已同步','syncing':'🔄 同步中…','error':'⚠️ 失敗'}[gSyncStatus]||'🔌 未登入';
-  const sharedFid = localStorage.getItem(LS_GDRIVE_FID)||'';
+  const lastLogin = parseInt(localStorage.getItem(LS_LAST_LOGIN)||'0');
+  const lastLoginStr = lastLogin ? new Date(lastLogin).toLocaleDateString('zh-TW') : '尚未登入';
   html+=`<div class="card">
     <div class="card-t">☁️ Google Drive 同步
       <span id="sync-badge" style="float:right;font-size:12px;font-weight:400;color:var(--c5);">${gBadge}</span>
     </div>
-    <p style="font-size:13px;color:var(--c5);margin-bottom:12px;">登入後，可讀取雲端資料；記帳完畢後按畫面右下角的 <b>💾 存檔</b> 即可同步到 Google Drive。</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+    <p style="font-size:13px;color:var(--c5);margin-bottom:12px;">登入後可讀取雲端資料；記帳完畢後按右下角 <b>💾 存檔</b> 同步。30 天內自動登入，無需重複操作。</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
       ${gToken
         ? `<button class="btn2" onclick="gLoadData()">📥 重新載入雲端資料</button>
            <button class="btnd" onclick="gSignOut()">登出 Google</button>`
         : `<button class="btng" onclick="gSignIn()">🔑 登入 Google</button>`
       }
     </div>
-    ${gToken && gFileId ? `<div style="font-size:12px;color:#10B981;margin-bottom:10px;">✅ 已連結 Google Drive</div>` : ''}
-    <div style="border-top:1px solid var(--c3);padding-top:12px;margin-top:4px;">
-      <div style="font-size:13px;font-weight:600;margin-bottom:6px;">👨‍👩‍👧 家人共用設定</div>
-      <p style="font-size:12px;color:var(--c5);margin-bottom:8px;">家人要看到同一份資料，請填入共用檔案 ID。持有人先存檔後，把下方的檔案 ID 複製給家人填入。</p>
-      ${sharedFid ? `<div style="font-size:12px;color:var(--c5);margin-bottom:6px;">目前檔案 ID：</div>
-        <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;">
-          <input type="text" value="${sharedFid}" readonly id="fid-display"
-            style="flex:1;padding:7px 10px;border:1px solid var(--c3);border-radius:8px;font-size:12px;background:var(--c1);color:var(--c7);">
-          <button class="btn2" onclick="copyFid()" style="white-space:nowrap;">複製</button>
-        </div>` : ''}
-      <div style="display:flex;gap:6px;align-items:center;">
-        <input type="text" id="fid-input" placeholder="貼上共用檔案 ID…"
-          style="flex:1;padding:7px 10px;border:1px solid var(--c3);border-radius:8px;font-size:12px;">
-        <button class="btn2" onclick="setSharedFid()" style="white-space:nowrap;">套用</button>
-        ${sharedFid ? `<button class="btnd" onclick="clearSharedFid()" style="white-space:nowrap;">清除</button>` : ''}
-      </div>
-    </div>
+    <div style="font-size:12px;color:var(--c5);">上次登入：${lastLoginStr}</div>
+    ${gToken ? `<div style="font-size:12px;color:#10B981;margin-top:4px;">✅ 已連結 Google Drive</div>` : ''}
   </div>`;
   html+=`<div style="text-align:center;font-size:12px;color:var(--c5);padding:16px;">蘋果家記帳 v1.2 · 資料儲存於本裝置 + Google Drive</div>`;
   el.innerHTML=html;
@@ -2609,10 +2621,14 @@ function todayStr(){
 // ============================================================
 renderEntryForm();
 document.getElementById('month-display').textContent=`${curYear}年 ${MONTHS_TW[curMonth-1]}`;
-// Init Google Drive after GIS loads
+// Init Google Drive after GIS loads, then attempt silent auto-login
 (function tryInitGDrive(){
-  if(window.google?.accounts?.oauth2){ initGDrive(); }
-  else { setTimeout(tryInitGDrive, 400); }
+  if(window.google?.accounts?.oauth2){
+    initGDrive();
+    gAutoSignIn();
+  } else {
+    setTimeout(tryInitGDrive, 400);
+  }
 })();
 </script>
 </body>
