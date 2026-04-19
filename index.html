@@ -1368,9 +1368,12 @@ function submitEntry(){
   renderRecent();
   if(document.activeElement) document.activeElement.blur();
   setTimeout(()=>{
-    const el=document.getElementById('recent-list');
-    if(!el) return;
-    const y=el.getBoundingClientRect().top + window.scrollY - 8;
+    const list=document.getElementById('recent-list');
+    if(!list) return;
+    // 捲到剛新增的那一筆（第一個 txn-compact 項目）
+    const firstItem=list.querySelector('.txn-compact');
+    const target=firstItem||list;
+    const y=target.getBoundingClientRect().top + window.scrollY - 8;
     window.scrollTo({top:y, behavior:'smooth'});
   }, 350);
 }
@@ -2607,8 +2610,4 @@ function toast(msg){
 // ============================================================
 function fmt(n){
   if(!n) return '0';
-  return Math.abs(n).toLocaleString('zh-TW');
-}
-function todayStr(){
-  const d=new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(
+  return Math.abs(n
