@@ -6,7 +6,6 @@
 <title>蘋果家記帳</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{--p:#6366F1;--pl:#EEF2FF;--g:#10B981;--r:#EF4444;--w:#F59E0B;--c1:#F9FAFB;--c2:#F3F4F6;--c3:#E5E7EB;--c4:#D1D5DB;--c5:#6B7280;--c7:#374151;--c9:#111827;}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
@@ -284,9 +283,6 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   <div id="cc-content"></div>
 </div>
 
-<!-- Google Drive floating save button -->
-<button id="gdrive-save-btn" onclick="gSaveData()" style="display:flex;position:fixed;bottom:76px;right:16px;z-index:999;background:#10B981;color:white;border:none;border-radius:50px;padding:10px 20px;font-size:14px;font-weight:700;box-shadow:0 3px 14px rgba(16,185,129,0.45);align-items:center;gap:6px;cursor:pointer;letter-spacing:.5px;">💾 存檔</button>
-
 <!-- Bottom Nav -->
 <nav class="bnav">
   <button class="ni on" onclick="showScreen('entry')" id="ni-entry"><span class="ic">✏️</span>記帳</button>
@@ -376,9 +372,9 @@ const INC_SRCS = ['Jack工作','配息','我薪資','賣東西','紅包','其他
 const MONTHS_TW = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 
 function getTxns(){ try{return JSON.parse(localStorage.getItem(LS_TXN)||'[]');}catch{return[];} }
-function saveTxns(a){ localStorage.setItem(LS_TXN,JSON.stringify(a)); }
+function saveTxns(a){ localStorage.setItem(LS_TXN,JSON.stringify(a)); writeDataJSON(); }
 function getIncs(){ try{return JSON.parse(localStorage.getItem(LS_INC)||'[]');}catch{return[];} }
-function saveIncs(a){ localStorage.setItem(LS_INC,JSON.stringify(a)); }
+function saveIncs(a){ localStorage.setItem(LS_INC,JSON.stringify(a)); writeDataJSON(); }
 function getSettings(){
   const def = {
     year: new Date().getFullYear(),
@@ -396,7 +392,7 @@ function getSettings(){
     return s||def;
   }catch{return def;}
 }
-function saveSettings(s){ localStorage.setItem(LS_SET,JSON.stringify(s)); }
+function saveSettings(s){ localStorage.setItem(LS_SET,JSON.stringify(s)); writeDataJSON(); }
 
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
@@ -769,258 +765,147 @@ async function exportQuarterlyToExcel(){
 }
 
 // ============================================================
-// GOOGLE DRIVE SYNC
+// FILE SYSTEM SYNC (File System Access API — Chrome/Edge)
 // ============================================================
-const GDRIVE_FILE_NAME = 'apple_budget_data.json';
-const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
-const LS_GDRIVE_CID = 'apple_gdrive_cid';
-const LS_GDRIVE_FID = 'apple_gdrive_fid';
-const GDRIVE_CLIENT_ID_DEFAULT = '617984798305-ie4697usvtj7pnnqoo2fnmv5p44k4i15.apps.googleusercontent.com';
-const GDRIVE_FILE_ID_DEFAULT = '17U88o-ywylpvnB7RhIFmxh67LwY4LUKF'; // 共用記帳資料
+let dirHandle = null;
+let syncStatus = 'unlinked'; // 'unlinked' | 'linked' | 'syncing' | 'error'
 
-let gToken = null;
-let gFileId = GDRIVE_FILE_ID_DEFAULT || localStorage.getItem(LS_GDRIVE_FID) || null;
-let gTokenClient = null;
-let gSyncStatus = 'unlinked'; // unlinked | linked | syncing | error
-let gSilentLogin = false; // suppress error toast during auto-login
+const IDB_DB = 'apple_fs_v1';
+const IDB_STORE = 'handles';
 
-function getGClientId(){ return localStorage.getItem(LS_GDRIVE_CID)||GDRIVE_CLIENT_ID_DEFAULT; }
-function saveGClientId(v){ localStorage.setItem(LS_GDRIVE_CID, v.trim()); }
-
-function initGDrive(){
-  const cid = getGClientId();
-  if(!cid || !window.google?.accounts?.oauth2) return;
-  try{
-    gTokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: cid,
-      scope: GDRIVE_SCOPE,
-      callback: async (resp) => {
-        if(resp.error){
-          if(!gSilentLogin){ gSyncStatus='error'; updateSyncBadge(); toast('⚠️ 登入失敗：'+resp.error); }
-          gSilentLogin = false;
-          return;
-        }
-        gSilentLogin = false;
-        gToken = resp.access_token;
-        storeGToken(gToken);
-        localStorage.setItem(LS_LAST_LOGIN, Date.now().toString());
-        gSyncStatus = 'linked'; updateSyncBadge(); updateSaveBtnVisibility();
-        await gLoadData();
-      }
-    });
-  }catch(e){ console.warn('initGDrive',e); }
+function openIDB(){
+  return new Promise((res,rej)=>{
+    const req = indexedDB.open(IDB_DB,1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror = rej;
+  });
+}
+async function persistHandle(h){
+  const db = await openIDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put(h,'dir');
+    tx.oncomplete = res; tx.onerror = rej;
+  });
+}
+async function restoreHandle(){
+  const db = await openIDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(IDB_STORE,'readonly');
+    const req = tx.objectStore(IDB_STORE).get('dir');
+    req.onsuccess = e => res(e.target.result);
+    req.onerror = rej;
+  });
+}
+async function clearHandle(){
+  const db = await openIDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).delete('dir');
+    tx.oncomplete = res; tx.onerror = rej;
+  });
 }
 
-const LS_LAST_LOGIN  = 'apple_last_login';
-const LS_GTOKEN      = 'apple_gtoken';
-const LS_GTOKEN_EXP  = 'apple_gtoken_exp';
-const AUTO_LOGIN_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 天
-const TOKEN_TTL_MS   = 55 * 60 * 1000; // 55 分鐘
-
-function storeGToken(token){
-  localStorage.setItem(LS_GTOKEN, token);
-  localStorage.setItem(LS_GTOKEN_EXP, (Date.now() + TOKEN_TTL_MS).toString());
-}
-function getCachedToken(){
-  const t = localStorage.getItem(LS_GTOKEN);
-  const exp = parseInt(localStorage.getItem(LS_GTOKEN_EXP)||'0');
-  return (t && Date.now() < exp) ? t : null;
-}
-function clearGToken(){
-  localStorage.removeItem(LS_GTOKEN);
-  localStorage.removeItem(LS_GTOKEN_EXP);
-}
-
-async function gAutoSignIn(){
-  const last = parseInt(localStorage.getItem(LS_LAST_LOGIN)||'0');
-  if(Date.now() - last > AUTO_LOGIN_EXPIRY_MS) return; // 超過30天，要求手動登入
-
-  // 優先用快取的 token（55分鐘內有效）
-  const cached = getCachedToken();
-  if(cached){
-    gToken = cached;
-    gSyncStatus = 'linked'; updateSyncBadge(); updateSaveBtnVisibility();
-    await gLoadData();
-    return;
-  }
-
-  // token 過期，嘗試靜默重新取得
-  const cid = getGClientId();
-  if(!cid || !window.google?.accounts?.oauth2) return;
-  if(!gTokenClient) initGDrive();
-  if(!gTokenClient) return;
-  gSilentLogin = true;
-  gTokenClient.requestAccessToken({ prompt:'none' });
-}
-
-async function gSignIn(){
-  const cid = getGClientId();
-  if(!cid){ toast('請先在設定中填入 Google Client ID'); return; }
-  if(!window.google?.accounts?.oauth2){ toast('⚠️ Google 服務載入中，請稍後再試'); return; }
-  if(!gTokenClient) initGDrive();
-  if(!gTokenClient){ toast('⚠️ 初始化失敗，請確認 Client ID 正確'); return; }
-  gTokenClient.requestAccessToken();
-}
-
-function gSignOut(){
-  if(gToken) try{ google.accounts.oauth2.revoke(gToken, ()=>{}); }catch(e){}
-  clearGToken();
-  localStorage.removeItem(LS_LAST_LOGIN);
-  gToken = null; gFileId = GDRIVE_FILE_ID_DEFAULT||null; gSyncStatus = 'unlinked';
-  updateSyncBadge(); updateSaveBtnVisibility();
-  if(curScreen==='settings') renderSettings();
-  toast('已登出 Google');
-}
-
-async function gFindFile(){
-  // Use hardcoded default first, then localStorage
-  if(GDRIVE_FILE_ID_DEFAULT) return GDRIVE_FILE_ID_DEFAULT;
-  const stored = localStorage.getItem(LS_GDRIVE_FID);
-  if(stored) return stored;
-  // Search by name
-  const resp = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=name%3D%27${GDRIVE_FILE_NAME}%27+and+trashed%3Dfalse&spaces=drive&fields=files(id,name)`,
-    { headers: { Authorization: `Bearer ${gToken}` } }
-  );
-  if(!resp.ok) throw new Error('gFindFile '+resp.status);
-  const data = await resp.json();
-  if(data.files && data.files.length>0){
-    const id = data.files[0].id;
-    localStorage.setItem(LS_GDRIVE_FID, id); // remember it
-    return id;
-  }
-  return null;
-}
-
-async function gLoadData(){
-  if(!gToken) return;
-  gSyncStatus = 'syncing'; updateSyncBadge();
-  try{
-    const fileId = await gFindFile();
-    if(!fileId){
-      gSyncStatus = 'linked'; updateSyncBadge();
-      toast('☁️ 雲端尚無資料，記帳後請按「存檔」建立');
-      if(curScreen==='settings') renderSettings();
-      return;
-    }
-    gFileId = fileId;
-    const resp = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-      { headers: { Authorization: `Bearer ${gToken}` } }
-    );
-    if(!resp.ok) throw new Error('gLoadData '+resp.status);
-    const data = await resp.json();
-    if(data.txns) saveTxnsRaw(data.txns);
-    if(data.incs) saveIncsRaw(data.incs);
-    if(data.settings) saveSettingsRaw(data.settings);
-    if(data.bills) saveBillsRaw(data.bills);
-    gSyncStatus = 'linked'; updateSyncBadge();
-    toast('✅ 已從 Google Drive 載入最新資料');
-    // 切換到記帳頁並完整重新渲染
-    curScreen='entry';
-    document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
-    const entryScreen=document.getElementById('s-entry');
-    if(entryScreen) entryScreen.classList.add('active');
-    document.querySelectorAll('.ni').forEach(el=>el.classList.remove('on'));
-    const entryNav=document.getElementById('ni-entry');
-    if(entryNav) entryNav.classList.add('on');
-    renderEntryForm();
-  }catch(e){
-    console.warn('gLoadData',e);
-    gSyncStatus = 'error'; updateSyncBadge();
-    toast('⚠️ 載入失敗，請重試');
-  }
-}
-
-async function gSaveData(){
-  if(!gToken){ toast('請先登入 Google'); return; }
-  gSyncStatus = 'syncing'; updateSyncBadge();
+async function writeDataJSON(){
+  if(!dirHandle) return;
   try{
     const payload = {
       txns: getTxns(), incs: getIncs(),
       settings: getSettings(), bills: getBills(),
       synced: new Date().toISOString()
     };
-    const body = JSON.stringify(payload, null, 2);
-    if(!gFileId) gFileId = await gFindFile();
-    if(gFileId){
-      const r = await fetch(
-        `https://www.googleapis.com/upload/drive/v3/files/${gFileId}?uploadType=media`,
-        { method:'PATCH', headers:{ Authorization:`Bearer ${gToken}`, 'Content-Type':'application/json' }, body }
-      );
-      if(!r.ok) throw new Error('gSaveData PATCH '+r.status);
-    } else {
-      const meta = { name: GDRIVE_FILE_NAME, mimeType:'application/json' };
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(meta)], { type:'application/json' }));
-      form.append('file',     new Blob([body],               { type:'application/json' }));
-      const r = await fetch(
-        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-        { method:'POST', headers:{ Authorization:`Bearer ${gToken}` }, body:form }
-      );
-      if(!r.ok) throw new Error('gSaveData POST '+r.status);
-      const created = await r.json();
-      gFileId = created.id;
-      localStorage.setItem(LS_GDRIVE_FID, gFileId);
-    }
-    gSyncStatus = 'linked'; updateSyncBadge();
-    toast('✅ 已存檔到 Google Drive');
-    renderCurrentScreen();
+    const fh = await dirHandle.getFileHandle('data.json',{create:true});
+    const w = await fh.createWritable();
+    await w.write(JSON.stringify(payload,null,2));
+    await w.close();
+    syncStatus='linked';
+    updateSyncBadge();
+  }catch(e){ console.warn('writeDataJSON',e); syncStatus='error'; updateSyncBadge(); }
+}
+
+async function readDataJSON(){
+  if(!dirHandle) return null;
+  try{
+    const fh = await dirHandle.getFileHandle('data.json',{create:false});
+    const file = await fh.getFile();
+    return JSON.parse(await file.text());
   }catch(e){
-    console.warn('gSaveData',e);
-    gSyncStatus = 'error'; updateSyncBadge();
-    toast('⚠️ 存檔失敗，請重試');
+    if(e.name!=='NotFoundError') console.warn('readDataJSON',e);
+    return null;
   }
 }
 
+async function linkFolder(){
+  if(!window.showDirectoryPicker){ toast('⚠️ 請使用 Chrome 或 Edge 瀏覽器'); return; }
+  try{
+    dirHandle = await window.showDirectoryPicker({mode:'readwrite',id:'apple-budget'});
+    await persistHandle(dirHandle);
+    await writeDataJSON();
+    toast('✓ 已連結資料夾，資料已儲存');
+    if(curScreen==='settings') renderSettings();
+  }catch(e){ if(e.name!=='AbortError') toast('⚠️ 連結失敗'); }
+}
+
+async function unlinkFolder(){
+  dirHandle=null; syncStatus='unlinked';
+  await clearHandle();
+  toast('已解除連結');
+  if(curScreen==='settings') renderSettings();
+}
+
+async function pullFromFile(){
+  if(!dirHandle){ toast('請先連結資料夾'); return; }
+  syncStatus='syncing'; updateSyncBadge();
+  const data = await readDataJSON();
+  if(!data){ toast('⚠️ 找不到 data.json'); syncStatus='error'; updateSyncBadge(); return; }
+  if(data.txns) saveTxnsRaw(data.txns);
+  if(data.incs) saveIncsRaw(data.incs);
+  if(data.settings) saveSettingsRaw(data.settings);
+  if(data.bills) saveBillsRaw(data.bills);
+  syncStatus='linked'; updateSyncBadge();
+  toast('✓ 已從 OneDrive 載入最新資料');
+  renderEntryForm();
+  if(curScreen==='monthly') renderMonthly();
+  if(curScreen==='settings') renderSettings();
+}
+
 function updateSyncBadge(){
-  const el = document.getElementById('sync-badge');
+  const el=document.getElementById('sync-badge');
   if(!el) return;
-  const map = { unlinked:'🔌 未登入', linked:'✅ 已同步', syncing:'🔄 同步中…', error:'⚠️ 失敗' };
-  el.textContent = map[gSyncStatus]||'🔌 未登入';
+  const icons={'unlinked':'🔌','linked':'✅','syncing':'🔄','error':'⚠️'};
+  const labels={'unlinked':'未連結','linked':'已同步','syncing':'同步中…','error':'同步失敗'};
+  el.textContent=icons[syncStatus]+' '+labels[syncStatus];
 }
 
-function updateSaveBtnVisibility(){
-  // Button is always visible; color indicates login state
-  const btn = document.getElementById('gdrive-save-btn');
-  if(btn) btn.style.background = gToken ? '#10B981' : '#9CA3AF';
+async function initFileSync(){
+  if(!window.showDirectoryPicker) return;
+  try{
+    const h = await restoreHandle();
+    if(!h) return;
+    const perm = await h.queryPermission({mode:'readwrite'});
+    if(perm==='granted'){
+      dirHandle=h;
+      const data = await readDataJSON();
+      if(data){
+        if(data.txns) saveTxnsRaw(data.txns);
+        if(data.incs) saveIncsRaw(data.incs);
+        if(data.settings) saveSettingsRaw(data.settings);
+        if(data.bills) saveBillsRaw(data.bills);
+      }
+      syncStatus='linked';
+    } else {
+      dirHandle=h;
+      syncStatus='unlinked';
+    }
+  }catch(e){ console.warn('initFileSync',e); }
 }
 
-function copyFid(){
-  const el = document.getElementById('fid-display');
-  if(!el) return;
-  navigator.clipboard.writeText(el.value).then(()=>toast('✅ 已複製檔案 ID')).catch(()=>{ el.select(); document.execCommand('copy'); toast('✅ 已複製'); });
-}
-function setSharedFid(){
-  const val = (document.getElementById('fid-input')||{}).value||'';
-  if(!val.trim()){ toast('請填入檔案 ID'); return; }
-  localStorage.setItem(LS_GDRIVE_FID, val.trim());
-  gFileId = val.trim();
-  renderSettings();
-  toast('✅ 已套用共用檔案 ID，重新載入資料中…');
-  if(gToken) gLoadData();
-}
-function clearSharedFid(){
-  localStorage.removeItem(LS_GDRIVE_FID);
-  gFileId = null;
-  renderSettings();
-  toast('已清除檔案 ID');
-}
-function saveGClientIdFromInput(){
-  const val = (document.getElementById('gdrive-cid-input')||{}).value||'';
-  if(!val.trim()){ toast('請填入 Client ID'); return; }
-  saveGClientId(val);
-  initGDrive();
-  renderSettings();
-  toast('✅ Client ID 已儲存，請點「登入 Google」');
-}
-
-function clearGClientId(){
-  gSignOut();
-  localStorage.removeItem(LS_GDRIVE_CID);
-  gTokenClient = null;
-  renderSettings();
-}
+// Raw save helpers (don't re-trigger sync)
+function saveTxnsRaw(a){ localStorage.setItem(LS_TXN,JSON.stringify(a)); }
+function saveIncsRaw(a){ localStorage.setItem(LS_INC,JSON.stringify(a)); }
+function saveSettingsRaw(s){ localStorage.setItem(LS_SET,JSON.stringify(s)); }
+function saveBillsRaw(b){ localStorage.setItem(LS_BILLS,JSON.stringify(b)); }
 
 function renderCurrentScreen(){
   if(curScreen==='entry') renderEntryForm();
@@ -1029,12 +914,6 @@ function renderCurrentScreen(){
   else if(curScreen==='big') renderBigItems();
   else if(curScreen==='creditcard') renderCCPage();
 }
-
-// Raw save helpers (don't re-trigger sync)
-function saveTxnsRaw(a){ localStorage.setItem(LS_TXN,JSON.stringify(a)); }
-function saveIncsRaw(a){ localStorage.setItem(LS_INC,JSON.stringify(a)); }
-function saveSettingsRaw(s){ localStorage.setItem(LS_SET,JSON.stringify(s)); }
-function saveBillsRaw(b){ localStorage.setItem(LS_BILLS,JSON.stringify(b)); }
 
 // ============================================================
 // STATE
@@ -1410,14 +1289,6 @@ function submitEntry(){
     setAmt(0);
   }
   renderRecent();
-  // 先收虛擬鍵盤，再等動畫結束後 scroll
-  if(document.activeElement) document.activeElement.blur();
-  setTimeout(()=>{
-    const el=document.getElementById('recent-list');
-    if(!el) return;
-    const y=el.getBoundingClientRect().top + window.scrollY - 8;
-    window.scrollTo({top:y, behavior:'smooth'});
-  }, 350);
 }
 
 let recentFilterYear=new Date().getFullYear(), recentFilterMonth=new Date().getMonth()+1;
@@ -2246,7 +2117,7 @@ const CC_CARDS=[
 ];
 
 function getBills(){ try{return JSON.parse(localStorage.getItem(LS_BILLS)||'[]');}catch{return[];} }
-function saveBills(b){ localStorage.setItem(LS_BILLS,JSON.stringify(b)); }
+function saveBills(b){ localStorage.setItem(LS_BILLS,JSON.stringify(b)); writeDataJSON(); }
 
 let ccYear=new Date().getFullYear();
 let ccMonth=0; // 0 = all months
@@ -2393,26 +2264,25 @@ function renderSettings(){
       <button class="btnd" onclick="clearAll()">清除全部資料</button>
     </div>
   </div>`;
-  // Google Drive sync card
-  const gBadge = {'unlinked':'🔌 未登入','linked':'✅ 已同步','syncing':'🔄 同步中…','error':'⚠️ 失敗'}[gSyncStatus]||'🔌 未登入';
-  const lastLogin = parseInt(localStorage.getItem(LS_LAST_LOGIN)||'0');
-  const lastLoginStr = lastLogin ? new Date(lastLogin).toLocaleDateString('zh-TW') : '尚未登入';
+  // OneDrive sync card
+  const linked = !!dirHandle && syncStatus!=='unlinked';
   html+=`<div class="card">
-    <div class="card-t">☁️ Google Drive 同步
-      <span id="sync-badge" style="float:right;font-size:12px;font-weight:400;color:var(--c5);">${gBadge}</span>
+    <div class="card-t">☁️ OneDrive 同步
+      <span id="sync-badge" style="float:right;font-size:12px;font-weight:400;color:var(--c5);">${
+        {'unlinked':'🔌 未連結','linked':'✅ 已同步','syncing':'🔄 同步中…','error':'⚠️ 同步失敗'}[syncStatus]
+      }</span>
     </div>
-    <p style="font-size:13px;color:var(--c5);margin-bottom:12px;">登入後可讀取雲端資料；記帳完畢後按右下角 <b>💾 存檔</b> 同步。30 天內自動登入，無需重複操作。</p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-      ${gToken
-        ? `<button class="btn2" onclick="gLoadData()">📥 重新載入雲端資料</button>
-           <button class="btnd" onclick="gSignOut()">登出 Google</button>`
-        : `<button class="btng" onclick="gSignIn()">🔑 登入 Google</button>`
+    <p style="font-size:13px;color:var(--c5);margin-bottom:12px;">連結資料夾後，每次記帳自動存 <b>data.json</b> 到 OneDrive；可在記帳、月報、季報頁直接下載 Excel。</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${linked
+        ? `<button class="btn2" onclick="pullFromFile()">📥 從資料夾載入</button>
+           <button class="btnd" onclick="unlinkFolder()">解除連結</button>`
+        : `<button class="btng" onclick="linkFolder()">🔗 連結 OneDrive 資料夾</button>`
       }
     </div>
-    <div style="font-size:12px;color:var(--c5);">上次登入：${lastLoginStr}</div>
-    ${gToken ? `<div style="font-size:12px;color:#10B981;margin-top:4px;">✅ 已連結 Google Drive</div>` : ''}
+    ${linked ? `<div style="font-size:12px;color:var(--c5);margin-top:8px;">已連結：${dirHandle.name}</div>` : ''}
   </div>`;
-  html+=`<div style="text-align:center;font-size:12px;color:var(--c5);padding:16px;">蘋果家記帳 v1.2 · 資料儲存於本裝置 + Google Drive</div>`;
+  html+=`<div style="text-align:center;font-size:12px;color:var(--c5);padding:16px;">蘋果家記帳 v1.1 · 資料儲存於本裝置 + OneDrive</div>`;
   el.innerHTML=html;
 }
 
@@ -2663,4 +2533,8 @@ function todayStr(){
 // INIT
 // ============================================================
 renderEntryForm();
-document.getElementById('month-displ
+document.getElementById('month-display').textContent=`${curYear}年 ${MONTHS_TW[curMonth-1]}`;
+initFileSync();
+</script>
+</body>
+</html>
