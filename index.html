@@ -1099,11 +1099,11 @@ function spreadMonthCount(startYM,endYM){
   const [ey,em]=endYM.split('-').map(Number);
   return (ey-sy)*12+(em-sm)+1;
 }
-function setAmt(n, noFocus){
+function setAmt(n){
   const el=document.getElementById('inp-amt'); if(!el) return;
   el.dataset.raw=String(n);
   el.value=n>0?n.toLocaleString('zh-TW'):'';
-  if(!noFocus) el.focus();
+  el.focus();
 }
 function amtInput(el){
   // allow digits, dot, and math operators while typing
@@ -1337,7 +1337,7 @@ function submitEntry(){
       toast('✓ 已記錄支出');
     }
     saveTxns(txns);
-    setAmt(0, true); eduSpread=false; eduStartYM=null; eduEndYM=null;
+    setAmt(0); eduSpread=false; eduStartYM=null; eduEndYM=null;
     document.getElementById('inp-item').value='';
 
   } else if(entryType==='income'){
@@ -1346,7 +1346,7 @@ function submitEntry(){
     incs.unshift({id:uid(),date,source:src,amount:amt,note});
     saveIncs(incs);
     toast('✓ 已記錄收入');
-    setAmt(0, true);
+    setAmt(0);
 
   } else {
     // Fixed expense override
@@ -1360,38 +1360,9 @@ function submitEntry(){
       amount:amt,payment:selPayment,note,reconciled:false});
     saveTxns(txns);
     toast('✓ 已記錄固定支出');
-    setAmt(0, true);
+    setAmt(0);
   }
   renderRecent();
-  // 偵測鍵盤是否開著（visualViewport 高度明顯小於 window）
-  const vvh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  const keyboardOpen = (window.innerHeight - vvh) > 100;
-  if(document.activeElement) document.activeElement.blur();
-
-  function scrollToNewItem(){
-    const list = document.getElementById('recent-list');
-    if(!list) return;
-    const firstItem = list.querySelector('.txn-compact');
-    const target = firstItem || list;
-    const y = target.getBoundingClientRect().top + window.scrollY - 8;
-    window.scrollTo({top: y, behavior: 'smooth'});
-  }
-
-  if(keyboardOpen && window.visualViewport){
-    // 等 visualViewport resize 事件：鍵盤真正收起後再捲
-    let fired = false;
-    const onVVResize = () => {
-      if(fired) return;
-      fired = true;
-      window.visualViewport.removeEventListener('resize', onVVResize);
-      setTimeout(scrollToNewItem, 80); // 80ms 讓瀏覽器完成自身捲動復位
-    };
-    window.visualViewport.addEventListener('resize', onVVResize);
-    setTimeout(() => { onVVResize(); }, 700); // 保底 fallback
-  } else {
-    // 桌機或鍵盤未開：直接捲
-    setTimeout(scrollToNewItem, 80);
-  }
 }
 
 let recentFilterYear=new Date().getFullYear(), recentFilterMonth=new Date().getMonth()+1;
