@@ -2656,4 +2656,13 @@ renderEntryForm();
 document.getElementById('month-display').textContent=`${curYear}年 ${MONTHS_TW[curMonth-1]}`;
 // Init Google Drive after GIS loads, then attempt silent auto-login
 (function tryInitGDrive(){
-  if(window
+  if(window.google?.accounts?.oauth2){
+    initGDrive();
+    gAutoSignIn();
+  } else {
+    setTimeout(tryInitGDrive, 400);
+  }
+})();
+</script>
+</body>
+</html>
