@@ -1404,10 +1404,14 @@ function submitEntry(){
     setAmt(0);
   }
   renderRecent();
+  // 先收虛擬鍵盤，再等動畫結束後 scroll
+  if(document.activeElement) document.activeElement.blur();
   setTimeout(()=>{
     const el=document.getElementById('recent-list');
-    if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
-  }, 80);
+    if(!el) return;
+    const y=el.getBoundingClientRect().top + window.scrollY - 8;
+    window.scrollTo({top:y, behavior:'smooth'});
+  }, 350);
 }
 
 let recentFilterYear=new Date().getFullYear(), recentFilterMonth=new Date().getMonth()+1;
@@ -2656,13 +2660,4 @@ renderEntryForm();
 document.getElementById('month-display').textContent=`${curYear}年 ${MONTHS_TW[curMonth-1]}`;
 // Init Google Drive after GIS loads, then attempt silent auto-login
 (function tryInitGDrive(){
-  if(window.google?.accounts?.oauth2){
-    initGDrive();
-    gAutoSignIn();
-  } else {
-    setTimeout(tryInitGDrive, 400);
-  }
-})();
-</script>
-</body>
-</html>
+  i
