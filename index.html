@@ -1099,11 +1099,11 @@ function spreadMonthCount(startYM,endYM){
   const [ey,em]=endYM.split('-').map(Number);
   return (ey-sy)*12+(em-sm)+1;
 }
-function setAmt(n){
+function setAmt(n, noFocus){
   const el=document.getElementById('inp-amt'); if(!el) return;
   el.dataset.raw=String(n);
   el.value=n>0?n.toLocaleString('zh-TW'):'';
-  el.focus();
+  if(!noFocus) el.focus();
 }
 function amtInput(el){
   // allow digits, dot, and math operators while typing
@@ -1337,7 +1337,7 @@ function submitEntry(){
       toast('✓ 已記錄支出');
     }
     saveTxns(txns);
-    setAmt(0); eduSpread=false; eduStartYM=null; eduEndYM=null;
+    setAmt(0, true); eduSpread=false; eduStartYM=null; eduEndYM=null;
     document.getElementById('inp-item').value='';
 
   } else if(entryType==='income'){
@@ -1346,7 +1346,7 @@ function submitEntry(){
     incs.unshift({id:uid(),date,source:src,amount:amt,note});
     saveIncs(incs);
     toast('✓ 已記錄收入');
-    setAmt(0);
+    setAmt(0, true);
 
   } else {
     // Fixed expense override
@@ -1360,7 +1360,7 @@ function submitEntry(){
       amount:amt,payment:selPayment,note,reconciled:false});
     saveTxns(txns);
     toast('✓ 已記錄固定支出');
-    setAmt(0);
+    setAmt(0, true);
   }
   renderRecent();
   // 偵測鍵盤是否開著（visualViewport 高度明顯小於 window）
@@ -2611,4 +2611,37 @@ function openModal(html){
   document.getElementById('modal-sheet').innerHTML=html;
   document.getElementById('modal').classList.add('show');
 }
-fun
+function closeModal(e){
+  if(!e||e.target===document.getElementById('modal'))
+    document.getElementById('modal').classList.remove('show');
+}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function fmt(n){
+  if(!n) return '0';
+  return Math.abs(n).toLocaleString('zh-TW');
+}
+function todayStr(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderEntryForm();
+document.getElementById('month-display').textContent=`${curYear}年 ${MONTHS_TW[curMonth-1]}`;
+(function tryInitGDrive(){
+  if(window.google?.accounts?.oauth2){ initGDrive(); gAutoSignIn(); }
+  else { setTimeout(tryInitGDrive, 400); }
+})();
+</script>
+</body>
+</html>
