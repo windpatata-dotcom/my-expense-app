@@ -1366,13 +1366,6 @@ function submitEntry(){
     setAmt(0);
   }
   renderRecent();
-  if(document.activeElement) document.activeElement.blur();
-  setTimeout(()=>{
-    const el=document.getElementById('recent-list');
-    if(!el) return;
-    const y=el.getBoundingClientRect().top + window.scrollY - 8;
-    window.scrollTo({top:y, behavior:'smooth'});
-  }, 350);
 }
 
 let recentFilterYear=new Date().getFullYear(), recentFilterMonth=new Date().getMonth()+1;
@@ -2611,4 +2604,11 @@ function fmt(n){
 }
 function todayStr(){
   const d=new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ============================================================
+// INIT
+// ============================================================
+renderEntryForm();
+document.getElementById('month-display').textContent=`${curYear}年 ${MO
