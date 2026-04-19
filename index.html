@@ -1363,6 +1363,15 @@ function submitEntry(){
     setAmt(0);
   }
   renderRecent();
+  if(document.activeElement) document.activeElement.blur();
+  setTimeout(()=>{
+    const list=document.getElementById('recent-list');
+    if(!list) return;
+    const firstItem=list.querySelector('.txn-compact');
+    const target=firstItem||list;
+    const y=target.getBoundingClientRect().top + window.scrollY - 8;
+    window.scrollTo({top:y, behavior:'smooth'});
+  }, 350);
 }
 
 let recentFilterYear=new Date().getFullYear(), recentFilterMonth=new Date().getMonth()+1;
@@ -2604,15 +2613,4 @@ function todayStr(){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-// ============================================================
-// INIT
-// ============================================================
-renderEntryForm();
-document.getElementById('month-display').textContent=`${curYear}年 ${MONTHS_TW[curMonth-1]}`;
-(function tryInitGDrive(){
-  if(window.google?.accounts?.oauth2){ initGDrive(); gAutoSignIn(); }
-  else { setTimeout(tryInitGDrive, 400); }
-})();
-</script>
-</body>
-</html>
+// ==========================================
