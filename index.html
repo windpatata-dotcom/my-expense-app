@@ -270,10 +270,7 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 </div>
 
 <div id="s-creditcard" class="screen">
-  <div class="screen-header" style="display:flex;justify-content:space-between;align-items:center;">
-    <span>信用卡對帳 💳</span>
-    <button class="btng" onclick="gSaveData()" style="font-size:13px;padding:6px 12px;">💾 存檔</button>
-  </div>
+  <div class="screen-header">信用卡對帳 💳</div>
   <div id="cc-filter" class="ym-filter">
     <label>年份</label>
     <select id="cc-yr" onchange="setCCYear(+this.value)"></select>
@@ -1392,7 +1389,7 @@ function populateYearSel(elId, selectedYear){
 
 // ── 大筆支出收入 ─────────────────────────────────────────────
 const BIG_THRESHOLD=8000;
-let bigFilterYear=null, bigFilterType='t'; // default: 支出
+let bigFilterYear=new Date().getFullYear(), bigFilterType='t'; // 預設當年支出
 
 function renderBigItems(){
   const el=document.getElementById('big-content'); if(!el) return;
@@ -2197,7 +2194,7 @@ function getBills(){ try{return JSON.parse(localStorage.getItem(LS_BILLS)||'[]')
 function saveBills(b){ localStorage.setItem(LS_BILLS,JSON.stringify(b)); }
 
 let ccYear=new Date().getFullYear();
-let ccMonth=0; // 0 = all months
+let ccMonth=new Date().getMonth()+1; // 預設當月
 
 function setCCYear(y){ ccYear=y; renderCCPage(); }
 function setCCMonth(m){ ccMonth=m; renderCCPage(); }
