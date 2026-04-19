@@ -1110,7 +1110,7 @@ function showScreen(s){
   document.getElementById('s-'+s).classList.add('active');
   document.querySelectorAll('.ni').forEach(el=>el.classList.remove('on'));
   document.getElementById('ni-'+s).classList.add('on');
-  if(s==='entry') renderEntryForm();
+  if(s==='entry') renderRecent();
   if(s==='monthly') renderMonthly();
   if(s==='quarterly') renderQuarterly();
   if(s==='annual') renderAnnual();
@@ -2666,3 +2666,4 @@ document.getElementById('month-display').textContent=`${curYear}年 ${MONTHS_TW[
     gAutoSignIn();
   } else {
     setTimeout(tryInitGDrive, 400);
+  
