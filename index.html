@@ -1364,14 +1364,17 @@ function submitEntry(){
   }
   renderRecent();
   if(document.activeElement) document.activeElement.blur();
-  setTimeout(()=>{
+  // 等鍵盤完全收起（iOS 最多需要 ~500ms），再捲到新增的那筆
+  function scrollToNewItem(){
     const list=document.getElementById('recent-list');
     if(!list) return;
     const firstItem=list.querySelector('.txn-compact');
     const target=firstItem||list;
     const y=target.getBoundingClientRect().top + window.scrollY - 8;
     window.scrollTo({top:y, behavior:'smooth'});
-  }, 350);
+  }
+  setTimeout(scrollToNewItem, 500);   // 第一次捲（手機鍵盤收起後）
+  setTimeout(scrollToNewItem, 900);   // 第二次確保（iOS Safari 有時會晚復位）
 }
 
 let recentFilterYear=new Date().getFullYear(), recentFilterMonth=new Date().getMonth()+1;
@@ -2609,8 +2612,4 @@ function fmt(n){
   return Math.abs(n).toLocaleString('zh-TW');
 }
 function todayStr(){
-  const d=new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
-// ==========================================
+  const d=new Date
