@@ -1363,18 +1363,35 @@ function submitEntry(){
     setAmt(0);
   }
   renderRecent();
+  // 偵測鍵盤是否開著（visualViewport 高度明顯小於 window）
+  const vvh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const keyboardOpen = (window.innerHeight - vvh) > 100;
   if(document.activeElement) document.activeElement.blur();
-  // 等鍵盤完全收起（iOS 最多需要 ~500ms），再捲到新增的那筆
+
   function scrollToNewItem(){
-    const list=document.getElementById('recent-list');
+    const list = document.getElementById('recent-list');
     if(!list) return;
-    const firstItem=list.querySelector('.txn-compact');
-    const target=firstItem||list;
-    const y=target.getBoundingClientRect().top + window.scrollY - 8;
-    window.scrollTo({top:y, behavior:'smooth'});
+    const firstItem = list.querySelector('.txn-compact');
+    const target = firstItem || list;
+    const y = target.getBoundingClientRect().top + window.scrollY - 8;
+    window.scrollTo({top: y, behavior: 'smooth'});
   }
-  setTimeout(scrollToNewItem, 500);   // 第一次捲（手機鍵盤收起後）
-  setTimeout(scrollToNewItem, 900);   // 第二次確保（iOS Safari 有時會晚復位）
+
+  if(keyboardOpen && window.visualViewport){
+    // 等 visualViewport resize 事件：鍵盤真正收起後再捲
+    let fired = false;
+    const onVVResize = () => {
+      if(fired) return;
+      fired = true;
+      window.visualViewport.removeEventListener('resize', onVVResize);
+      setTimeout(scrollToNewItem, 80); // 80ms 讓瀏覽器完成自身捲動復位
+    };
+    window.visualViewport.addEventListener('resize', onVVResize);
+    setTimeout(() => { onVVResize(); }, 700); // 保底 fallback
+  } else {
+    // 桌機或鍵盤未開：直接捲
+    setTimeout(scrollToNewItem, 80);
+  }
 }
 
 let recentFilterYear=new Date().getFullYear(), recentFilterMonth=new Date().getMonth()+1;
@@ -2594,22 +2611,4 @@ function openModal(html){
   document.getElementById('modal-sheet').innerHTML=html;
   document.getElementById('modal').classList.add('show');
 }
-function closeModal(e){
-  if(!e||e.target===document.getElementById('modal'))
-    document.getElementById('modal').classList.remove('show');
-}
-function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2000);
-}
-
-// ============================================================
-// UTILS
-// ============================================================
-function fmt(n){
-  if(!n) return '0';
-  return Math.abs(n).toLocaleString('zh-TW');
-}
-function todayStr(){
-  const d=new Date
+fun
