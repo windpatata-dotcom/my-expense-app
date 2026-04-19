@@ -802,6 +802,7 @@ function initGDrive(){
         }
         gSilentLogin = false;
         gToken = resp.access_token;
+        storeGToken(gToken);
         localStorage.setItem(LS_LAST_LOGIN, Date.now().toString());
         gSyncStatus = 'linked'; updateSyncBadge(); updateSaveBtnVisibility();
         await gLoadData();
@@ -811,20 +812,46 @@ function initGDrive(){
   }catch(e){ console.warn('initGDrive',e); }
 }
 
-const LS_LAST_LOGIN = 'apple_last_login';
+const LS_LAST_LOGIN  = 'apple_last_login';
+const LS_GTOKEN      = 'apple_gtoken';
+const LS_GTOKEN_EXP  = 'apple_gtoken_exp';
 const AUTO_LOGIN_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000; // 30 天
+const TOKEN_TTL_MS   = 55 * 60 * 1000; // 55 分鐘
+
+function storeGToken(token){
+  localStorage.setItem(LS_GTOKEN, token);
+  localStorage.setItem(LS_GTOKEN_EXP, (Date.now() + TOKEN_TTL_MS).toString());
+}
+function getCachedToken(){
+  const t = localStorage.getItem(LS_GTOKEN);
+  const exp = parseInt(localStorage.getItem(LS_GTOKEN_EXP)||'0');
+  return (t && Date.now() < exp) ? t : null;
+}
+function clearGToken(){
+  localStorage.removeItem(LS_GTOKEN);
+  localStorage.removeItem(LS_GTOKEN_EXP);
+}
 
 async function gAutoSignIn(){
-  // Check if last login was within 30 days
   const last = parseInt(localStorage.getItem(LS_LAST_LOGIN)||'0');
-  if(Date.now() - last > AUTO_LOGIN_EXPIRY_MS) return; // expired, require manual login
-  // Silent login — no popup, works if user already authorized before
+  if(Date.now() - last > AUTO_LOGIN_EXPIRY_MS) return; // 超過30天，要求手動登入
+
+  // 優先用快取的 token（55分鐘內有效）
+  const cached = getCachedToken();
+  if(cached){
+    gToken = cached;
+    gSyncStatus = 'linked'; updateSyncBadge(); updateSaveBtnVisibility();
+    await gLoadData();
+    return;
+  }
+
+  // token 過期，嘗試靜默重新取得
   const cid = getGClientId();
   if(!cid || !window.google?.accounts?.oauth2) return;
   if(!gTokenClient) initGDrive();
   if(!gTokenClient) return;
   gSilentLogin = true;
-  gTokenClient.requestAccessToken({ prompt:'' });
+  gTokenClient.requestAccessToken({ prompt:'none' });
 }
 
 async function gSignIn(){
@@ -838,7 +865,9 @@ async function gSignIn(){
 
 function gSignOut(){
   if(gToken) try{ google.accounts.oauth2.revoke(gToken, ()=>{}); }catch(e){}
-  gToken = null; gFileId = null; gSyncStatus = 'unlinked';
+  clearGToken();
+  localStorage.removeItem(LS_LAST_LOGIN);
+  gToken = null; gFileId = GDRIVE_FILE_ID_DEFAULT||null; gSyncStatus = 'unlinked';
   updateSyncBadge(); updateSaveBtnVisibility();
   if(curScreen==='settings') renderSettings();
   toast('已登出 Google');
