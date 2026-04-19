@@ -806,7 +806,6 @@ function initGDrive(){
         localStorage.setItem(LS_LAST_LOGIN, Date.now().toString());
         gSyncStatus = 'linked'; updateSyncBadge(); updateSaveBtnVisibility();
         await gLoadData();
-        showScreen('entry');
       }
     });
   }catch(e){ console.warn('initGDrive',e); }
@@ -917,8 +916,15 @@ async function gLoadData(){
     if(data.bills) saveBillsRaw(data.bills);
     gSyncStatus = 'linked'; updateSyncBadge();
     toast('✅ 已從 Google Drive 載入最新資料');
-    renderCurrentScreen();
-    if(curScreen==='settings') renderSettings();
+    // 切換到記帳頁並完整重新渲染
+    curScreen='entry';
+    document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+    const entryScreen=document.getElementById('s-entry');
+    if(entryScreen) entryScreen.classList.add('active');
+    document.querySelectorAll('.ni').forEach(el=>el.classList.remove('on'));
+    const entryNav=document.getElementById('ni-entry');
+    if(entryNav) entryNav.classList.add('on');
+    renderEntryForm();
   }catch(e){
     console.warn('gLoadData',e);
     gSyncStatus = 'error'; updateSyncBadge();
@@ -1110,7 +1116,6 @@ function showScreen(s){
   document.getElementById('s-'+s).classList.add('active');
   document.querySelectorAll('.ni').forEach(el=>el.classList.remove('on'));
   document.getElementById('ni-'+s).classList.add('on');
-  if(s==='entry') renderRecent();
   if(s==='monthly') renderMonthly();
   if(s==='quarterly') renderQuarterly();
   if(s==='annual') renderAnnual();
@@ -2399,7 +2404,7 @@ function renderSettings(){
     <p style="font-size:13px;color:var(--c5);margin-bottom:12px;">登入後可讀取雲端資料；記帳完畢後按右下角 <b>💾 存檔</b> 同步。30 天內自動登入，無需重複操作。</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
       ${gToken
-        ? `<button class="btn2" onclick="gLoadData().then(()=>showScreen('entry'))">📥 重新載入雲端資料</button>
+        ? `<button class="btn2" onclick="gLoadData()">📥 重新載入雲端資料</button>
            <button class="btnd" onclick="gSignOut()">登出 Google</button>`
         : `<button class="btng" onclick="gSignIn()">🔑 登入 Google</button>`
       }
@@ -2658,12 +2663,4 @@ function todayStr(){
 // INIT
 // ============================================================
 renderEntryForm();
-document.getElementById('month-display').textContent=`${curYear}年 ${MONTHS_TW[curMonth-1]}`;
-// Init Google Drive after GIS loads, then attempt silent auto-login
-(function tryInitGDrive(){
-  if(window.google?.accounts?.oauth2){
-    initGDrive();
-    gAutoSignIn();
-  } else {
-    setTimeout(tryInitGDrive, 400);
-  
+document.getElementById('month-displ
