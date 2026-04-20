@@ -345,29 +345,27 @@ const LS_INC = 'apple_inc';
 const LS_SET = 'apple_set';
 
 const CATS = [
-  {id:'food',   label:'飲食',   em:'🍜'},
-  {id:'house',  label:'生活用品',em:'🏠'},
-  {id:'dress',  label:'治裝保養',em:'👗'},
-  {id:'med',    label:'醫療相關',em:'🏥'},
-  {id:'car',    label:'車子相關',em:'🚗'},
-  {id:'fun',    label:'娛樂聚餐',em:'🎉'},
-  {id:'edu',    label:'進修學習',em:'📚'},
-  {id:'gift',   label:'送禮',   em:'🎁'},
-  {id:'donate', label:'贈與',   em:'💝'},
-  {id:'other',  label:'其他',   em:'📦'},
+  {id:'food',   label:'飲食(食材)',em:'🍜'},
+  {id:'house',  label:'生活用品', em:'🏠'},
+  {id:'dress',  label:'治裝保養', em:'👗'},
+  {id:'med',    label:'醫療保險', em:'🏥'},
+  {id:'car',    label:'車子相關', em:'🚗'},
+  {id:'fun',    label:'娛樂聚餐', em:'🎉'},
+  {id:'edu',    label:'進修學習', em:'📚'},
+  {id:'gift',   label:'送禮',    em:'🎁'},
 ];
 const CAT_MAP = Object.fromEntries(CATS.map(c=>[c.id,c]));
 
-const SUB_EDU = ['果兒','平仔','家長','共同'];
+const SUB_EDU = ['果兒','平仔','Rian','Jack'];
 
 const PAYMENT_METHODS = [
   {id:'cash',       label:'現金或轉帳',      em:'💵'},
   {id:'lp',         label:'LinePay儲值',    em:'📱'},
   {id:'rian_cube',  label:'Rian國泰CUBE',   em:'💳'},
-  {id:'jack_cube',  label:'Jack國泰',       em:'💳'},
   {id:'rian_fubon', label:'Rian富邦好市多', em:'💳'},
-  {id:'jack_hsbc',  label:'Jack匯豐卡',     em:'💳'},
-  {id:'jack_union', label:'Jack聯邦卡',     em:'💳'},
+  {id:'jack_cube',  label:'Jack國泰',       em:'💳'},
+  {id:'jack_hsbc',  label:'Jack匯豐',       em:'💳'},
+  {id:'jack_union', label:'Jack聯邦',       em:'💳'},
 ];
 const CC_METHODS = ['rian_cube','jack_cube','rian_fubon','jack_hsbc','jack_union']; // 信用卡類（需對帳）
 
@@ -405,10 +403,9 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 // ============================================================
 const EXCEL_FILENAME = '2026記帳.xlsx';
 const CAT_MAP_XL = {
-  food:'🍜 飲食', house:'🏠 生活用品', dress:'👗 治裝保養',
-  med:'🏥 醫療相關',  car:'🚗 車子相關',   fun:'🎉 娛樂聚餐',
-  edu:'📚 進修學習',  gift:'🎁 送禮',       donate:'💝 贈與',
-  other:'📦 其他',   fixed:'🔒 固定支出',
+  food:'🍜 飲食(食材)', house:'🏠 生活用品', dress:'👗 治裝保養',
+  med:'🏥 醫療保險',    car:'🚗 車子相關',   fun:'🎉 娛樂聚餐',
+  edu:'📚 進修學習',    gift:'🎁 送禮',       fixed:'🔒 固定支出',
 };
 
 // ============================================================
@@ -995,13 +992,19 @@ function renderCurrentScreen(){
 let curScreen='entry';
 let entryType='expense';
 let selCat='food';
-let selSub='共同';
+let selSubs=[]; // 進修學習可複選對象
 let curYear=new Date().getFullYear();
 let curMonth=new Date().getMonth()+1; // 1-12
 let selPayment='cash';
 let eduSpread=false;
 let eduStartYM=null; // "YYYY-MM"
 let eduEndYM=null;   // "YYYY-MM"
+let foodSpread=false;
+let foodStartYM=null;
+let foodEndYM=null;
+let medSpread=false;
+let medStartYM=null;
+let medEndYM=null;
 
 // ── Calculator state ──
 let calcExpr='';
@@ -1232,6 +1235,11 @@ function renderEntryForm(){
   renderRecent();
 }
 
+function toggleSubEdu(s){
+  const idx=selSubs.indexOf(s);
+  if(idx>=0) selSubs.splice(idx,1); else selSubs.push(s);
+  document.querySelectorAll('.sb').forEach(b=>b.classList.toggle('on',selSubs.includes(b.textContent)));
+}
 function selCategory(id){
   selCat=id;
   document.querySelectorAll('.cb').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick').includes(`'${id}'`)));
@@ -1241,8 +1249,89 @@ function selCategory(id){
 function renderSubArea(){
   const el=document.getElementById('sub-area');
   if(!el) return;
-  if(selCat==='edu'){
-    // Build 24-month options starting from today's date (entry date field or today)
+  if(selCat==='edu'||selCat==='food'||selCat==='med'){
+    const entryDateEl=document.getElementById('inp-date');
+    const entryDate=entryDateEl&&entryDateEl.value?new Date(entryDateEl.value):new Date();
+    const baseY=entryDate.getFullYear(), baseM=entryDate.getMonth()+1;
+    // shared spread month builder
+    function buildSpreadOpts(startYM){
+      return Array.from({length:13},(_,i)=>{
+        let m=baseM+i, y=baseY;
+        while(m>12){m-=12;y++;}
+        const ym=`${y}-${String(m).padStart(2,'0')}`;
+        const lbl=y===baseY?`${m}月`:`${m}月(${y}年)`;
+        return {ym,lbl};
+      });
+    }
+    function buildEndOpts(startYM){
+      const [sy,sm]=startYM.split('-').map(Number);
+      return Array.from({length:13},(_,i)=>{
+        let m=sm+i, y=sy;
+        while(m>12){m-=12;y++;}
+        const ym=`${y}-${String(m).padStart(2,'0')}`;
+        const lbl=y===baseY?`${m}月`:`${m}月(${y}年)`;
+        return {ym,lbl};
+      });
+    }
+    function spreadBoxHtml(spread, startYM, endYM, onSpreadToggle, onStartChange, onEndChange){
+      const spreadMonths=buildSpreadOpts(startYM);
+      if(!startYM) startYM=spreadMonths[0].ym;
+      if(!endYM||endYM<startYM) endYM=startYM;
+      const endOpts=buildEndOpts(startYM);
+      if(!endOpts.find(o=>o.ym===endYM)) endYM=startYM;
+      const countM=spreadMonthCount(startYM,endYM);
+      const perM=spread&&countM>0?Math.floor(getAmt()/countM):0;
+      return `<div class="spread-box" style="margin-top:10px;">
+        <div class="spread-row">
+          <span style="font-size:14px;font-weight:500;">分攤到各月</span>
+          <label class="sw"><input type="checkbox" ${spread?'checked':''} onchange="${onSpreadToggle}"><span class="sw-sl"></span></label>
+        </div>
+        ${spread?`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+          <div><div style="font-size:12px;color:var(--c5);margin-bottom:4px;">起始月份</div>
+            <select class="fi" onchange="${onStartChange}">
+              ${spreadMonths.map(o=>`<option value="${o.ym}"${o.ym===startYM?' selected':''}>${o.lbl}</option>`).join('')}
+            </select></div>
+          <div><div style="font-size:12px;color:var(--c5);margin-bottom:4px;">結束月份</div>
+            <select class="fi" onchange="${onEndChange}">
+              ${endOpts.map(o=>`<option value="${o.ym}"${o.ym===endYM?' selected':''}>${o.lbl}</option>`).join('')}
+            </select></div>
+        </div>
+        ${getAmt()>0&&countM>0?`<div style="font-size:13px;color:var(--p);font-weight:600;">共 ${countM} 個月，每月 ${perM.toLocaleString('zh-TW')} 元${getAmt()-perM*(countM-1)!==perM?`（最後一月 ${(getAmt()-perM*(countM-1)).toLocaleString('zh-TW')} 元）`:''}</div>`:'<div style="font-size:13px;color:var(--c5);">請先輸入金額</div>'}
+        `:''}
+      </div>`;
+    }
+
+    if(selCat==='edu'){
+      if(!eduStartYM) eduStartYM=buildSpreadOpts()[0].ym;
+      if(!eduEndYM||eduEndYM<eduStartYM) eduEndYM=eduStartYM;
+      el.innerHTML=`
+        <div class="scr" style="margin-top:8px;">${
+          SUB_EDU.map(s=>`<button class="sb${selSubs.includes(s)?' on':''}" onclick="toggleSubEdu('${s}')">${s}</button>`).join('')
+        }</div>
+        ${spreadBoxHtml(eduSpread,eduStartYM,eduEndYM,
+          'eduSpread=this.checked;renderSubArea()',
+          'eduStartYM=this.value;if(eduEndYM<eduStartYM)eduEndYM=eduStartYM;renderSubArea()',
+          'eduEndYM=this.value;renderSubArea()'
+        )}`;
+    } else if(selCat==='food'){
+      if(!foodStartYM) foodStartYM=buildSpreadOpts()[0].ym;
+      if(!foodEndYM||foodEndYM<foodStartYM) foodEndYM=foodStartYM;
+      el.innerHTML=spreadBoxHtml(foodSpread,foodStartYM,foodEndYM,
+        'foodSpread=this.checked;renderSubArea()',
+        'foodStartYM=this.value;if(foodEndYM<foodStartYM)foodEndYM=foodStartYM;renderSubArea()',
+        'foodEndYM=this.value;renderSubArea()'
+      );
+    } else if(selCat==='med'){
+      if(!medStartYM) medStartYM=buildSpreadOpts()[0].ym;
+      if(!medEndYM||medEndYM<medStartYM) medEndYM=medStartYM;
+      el.innerHTML=spreadBoxHtml(medSpread,medStartYM,medEndYM,
+        'medSpread=this.checked;renderSubArea()',
+        'medStartYM=this.value;if(medEndYM<medStartYM)medEndYM=medStartYM;renderSubArea()',
+        'medEndYM=this.value;renderSubArea()'
+      );
+    }
+  } else if(selCat==='food'){
     const entryDateEl=document.getElementById('inp-date');
     const entryDate=entryDateEl&&entryDateEl.value?new Date(entryDateEl.value):new Date();
     const baseY=entryDate.getFullYear(), baseM=entryDate.getMonth()+1;
@@ -1253,42 +1342,37 @@ function renderSubArea(){
       const lbl=y===baseY?`${m}月`:`${m}月(${y}年)`;
       return {ym,lbl};
     });
-    if(!eduStartYM) eduStartYM=spreadMonths[0].ym;
-    if(!eduEndYM||eduEndYM<eduStartYM) eduEndYM=eduStartYM;
-    // Generate end options independently from start (always 13 months forward from start)
-    const [esy,esm]=eduStartYM.split('-').map(Number);
+    if(!foodStartYM) foodStartYM=spreadMonths[0].ym;
+    if(!foodEndYM||foodEndYM<foodStartYM) foodEndYM=foodStartYM;
+    const [fsy,fsm]=foodStartYM.split('-').map(Number);
     const endOpts=Array.from({length:13},(_,i)=>{
-      let m=esm+i, y=esy;
+      let m=fsm+i, y=fsy;
       while(m>12){m-=12;y++;}
       const ym=`${y}-${String(m).padStart(2,'0')}`;
       const lbl=y===baseY?`${m}月`:`${m}月(${y}年)`;
       return {ym,lbl};
     });
-    // If current eduEndYM is no longer a valid end option, reset to start
-    if(!endOpts.find(o=>o.ym===eduEndYM)) eduEndYM=eduStartYM;
-    const countM=spreadMonthCount(eduStartYM,eduEndYM);
-    const perM=eduSpread&&countM>0?Math.floor(getAmt()/countM):0;
+    if(!endOpts.find(o=>o.ym===foodEndYM)) foodEndYM=foodStartYM;
+    const countM=spreadMonthCount(foodStartYM,foodEndYM);
+    const perM=foodSpread&&countM>0?Math.floor(getAmt()/countM):0;
     el.innerHTML=`
-      <div class="scr" style="margin-top:8px;">${
-        SUB_EDU.map(s=>`<button class="sb${s===selSub?' on':''}" onclick="selSub='${s}';document.querySelectorAll('.sb').forEach(b=>b.classList.toggle('on',b.textContent==='${s}'))">${s}</button>`).join('')
-      }</div>
       <div class="spread-box" style="margin-top:10px;">
         <div class="spread-row">
           <span style="font-size:14px;font-weight:500;">分攤到各月</span>
-          <label class="sw"><input type="checkbox" id="spread-toggle" ${eduSpread?'checked':''} onchange="eduSpread=this.checked;renderSubArea()"><span class="sw-sl"></span></label>
+          <label class="sw"><input type="checkbox" ${foodSpread?'checked':''} onchange="foodSpread=this.checked;renderSubArea()"><span class="sw-sl"></span></label>
         </div>
-        ${eduSpread?`
+        ${foodSpread?`
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
           <div>
             <div style="font-size:12px;color:var(--c5);margin-bottom:4px;">起始月份</div>
-            <select class="fi" id="spread-start" onchange="eduStartYM=this.value;if(eduEndYM<eduStartYM)eduEndYM=eduStartYM;renderSubArea()">
-              ${spreadMonths.map(o=>`<option value="${o.ym}"${o.ym===eduStartYM?' selected':''}>${o.lbl}</option>`).join('')}
+            <select class="fi" onchange="foodStartYM=this.value;if(foodEndYM<foodStartYM)foodEndYM=foodStartYM;renderSubArea()">
+              ${spreadMonths.map(o=>`<option value="${o.ym}"${o.ym===foodStartYM?' selected':''}>${o.lbl}</option>`).join('')}
             </select>
           </div>
           <div>
             <div style="font-size:12px;color:var(--c5);margin-bottom:4px;">結束月份</div>
-            <select class="fi" id="spread-end" onchange="eduEndYM=this.value;renderSubArea()">
-              ${endOpts.map(o=>`<option value="${o.ym}"${o.ym===eduEndYM?' selected':''}>${o.lbl}</option>`).join('')}
+            <select class="fi" onchange="foodEndYM=this.value;renderSubArea()">
+              ${endOpts.map(o=>`<option value="${o.ym}"${o.ym===foodEndYM?' selected':''}>${o.lbl}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -1310,23 +1394,27 @@ function submitEntry(){
 
   if(entryType==='expense'){
     const item=document.getElementById('inp-item')?.value||'';
-    const sub=selCat==='edu'?selSub:'';
+    const sub=selCat==='edu'?selSubs.join('、'):'';
     const txns=getTxns();
 
-    // 教育費分攤
-    const spreadCount=selCat==='edu'&&eduSpread?spreadMonthCount(eduStartYM,eduEndYM):0;
+    // 分攤邏輯（進修學習 / 飲食食材 / 醫療保險）
+    const isEduSpread=selCat==='edu'&&eduSpread;
+    const isFoodSpread=selCat==='food'&&foodSpread;
+    const isMedSpread=selCat==='med'&&medSpread;
+    const spreadCount=isEduSpread?spreadMonthCount(eduStartYM,eduEndYM):isFoodSpread?spreadMonthCount(foodStartYM,foodEndYM):isMedSpread?spreadMonthCount(medStartYM,medEndYM):0;
+    const spreadStartYM=isEduSpread?eduStartYM:isFoodSpread?foodStartYM:medStartYM;
     if(spreadCount>0){
-      const [sy,sm]=eduStartYM.split('-').map(Number);
+      const [sy,sm]=spreadStartYM.split('-').map(Number);
       const perM=Math.floor(amt/spreadCount);
       const rem=amt-perM*(spreadCount-1);
-      const sId=uid(); // shared spreadId for the whole group
+      const sId=uid();
       for(let i=0;i<spreadCount;i++){
         let mIdx=sm+i, yIdx=sy;
         while(mIdx>12){mIdx-=12;yIdx++;}
         const mStr=String(mIdx).padStart(2,'0');
         const mAmt=i===spreadCount-1?rem:perM;
         const mDate=`${yIdx}-${mStr}-01`;
-        txns.unshift({id:uid(),date:mDate,type:'expense',cat:'edu',sub,item,
+        txns.unshift({id:uid(),date:mDate,type:'expense',cat:selCat,sub,item,
           amount:mAmt,payment:selPayment,note,spreadId:sId,
           spreadInfo:`第${i+1}攤/共${spreadCount}攤（總額${amt.toLocaleString('zh-TW')}）`,reconciled:false});
       }
@@ -1337,7 +1425,10 @@ function submitEntry(){
       toast('✓ 已記錄支出');
     }
     saveTxns(txns);
-    setAmt(0, true); eduSpread=false; eduStartYM=null; eduEndYM=null;
+    setAmt(0, true);
+    eduSpread=false; eduStartYM=null; eduEndYM=null; selSubs=[];
+    foodSpread=false; foodStartYM=null; foodEndYM=null;
+    medSpread=false; medStartYM=null; medEndYM=null;
     document.getElementById('inp-item').value='';
 
   } else if(entryType==='income'){
@@ -1629,7 +1720,7 @@ function editSpreadGroup(id){
         onblur="amtBlur(this);updateSpreadPreview()"
         onfocus="amtFocus(this)"></div>
     <div class="fg"><label class="fl">對象</label>
-      <select class="fi" id="m-sub">${SUB_EDU.map(s=>`<option${s===(txn.sub||'')?' selected':''}>${s}</option>`).join('')}</select></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0;">${SUB_EDU.map(s=>`<label style="display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer;"><input type="checkbox" class="m-sub-cb" value="${s}" ${(txn.sub||'').split('、').includes(s)?'checked':''}> ${s}</label>`).join('')}</div></div>
     <div class="fg"><label class="fl">項目說明</label>
       <input class="fi" id="m-item" value="${txn.item||''}"></div>
     <div class="fg"><label class="fl">支付方式</label>
@@ -1650,7 +1741,7 @@ function saveSpreadGroup(id){
   const rawAmt=document.getElementById('m-amt');
   const total=parseFloat((rawAmt.dataset.raw||rawAmt.value).replace(/,/g,''));
   if(!total||total<=0){ toast('請輸入金額'); return; }
-  const sub=document.getElementById('m-sub')?.value||'';
+  const sub=[...document.querySelectorAll('.m-sub-cb:checked')].map(c=>c.value).join('、');
   const item=document.getElementById('m-item').value;
   const payment=document.getElementById('m-pay').value;
   const n=group.length;
@@ -1692,7 +1783,7 @@ function editSingleTxn(id){
       <input class="fi big" id="m-amt" type="text" inputmode="decimal" value="${txn.amount}"
         oninput="amtInput(this)" onblur="amtBlur(this)" onfocus="amtFocus(this)"></div>
     <div class="fg"><label class="fl">對象</label>
-      <select class="fi" id="m-sub">${SUB_EDU.map(s=>`<option${s===(txn.sub||'')?' selected':''}>${s}</option>`).join('')}</select></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0;">${SUB_EDU.map(s=>`<label style="display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer;"><input type="checkbox" class="m-sub-cb" value="${s}" ${(txn.sub||'').split('、').includes(s)?'checked':''}> ${s}</label>`).join('')}</div></div>
     <div class="fg"><label class="fl">項目說明</label>
       <input class="fi" id="m-item" value="${txn.item||''}"></div>
     <div class="fg"><label class="fl">支付方式</label>
@@ -1728,7 +1819,7 @@ function editRecord(id, kind){
     const allPay=getAllPayments();
     const isEdu=txn.cat==='edu';
     const subHtml=isEdu?`<div class="fg"><label class="fl">對象</label>
-      <select class="fi" id="m-sub">${SUB_EDU.map(s=>`<option${s===(txn.sub||'')?' selected':''}>${s}</option>`).join('')}</select></div>`:'';
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0;">${SUB_EDU.map(s=>`<label style="display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer;"><input type="checkbox" class="m-sub-cb" value="${s}" ${(txn.sub||'').split('、').includes(s)?'checked':''}> ${s}</label>`).join('')}</div></div>`:'';
     openModal(`<div class="mt">編輯支出</div>
       <div class="fg"><label class="fl">金額</label>
         <input class="fi big" id="m-amt" type="text" inputmode="decimal" value="${txn.amount}"
@@ -1758,8 +1849,8 @@ function saveEditTxn(id){
   if(!n||n<=0){ toast('請輸入金額'); return; }
   t.amount=n;
   t.cat=document.getElementById('m-cat').value;
-  const subEl=document.getElementById('m-sub');
-  if(subEl) t.sub=subEl.value; else if(t.cat!=='edu') t.sub='';
+  const subCbs=document.querySelectorAll('.m-sub-cb:checked');
+  if(subCbs.length) t.sub=[...subCbs].map(c=>c.value).join('、'); else if(t.cat!=='edu') t.sub='';
   t.item=document.getElementById('m-item').value;
   t.payment=document.getElementById('m-pay').value;
   t.date=document.getElementById('m-date').value;
@@ -1934,15 +2025,16 @@ function renderMonthly(){
     const maxVal=Math.max(...barItems.map(b=>b.val),1);
     const totalForPct=barItems.reduce((s,b)=>s+b.val,0)||1;
     html+=barItems.map(b=>{
-      const barW=Math.max(Math.round(b.val/maxVal*100),6);
+      const barW=Math.max(Math.round(b.val/maxVal*100),3);
       const pctStr=Math.round(b.val/totalForPct*100)+'%';
-      return `<div style="display:flex;align-items:center;margin-bottom:7px;">
-        <div style="flex:1;position:relative;height:26px;background:var(--c2);border-radius:6px;overflow:hidden;">
-          <div style="position:absolute;left:0;top:0;bottom:0;width:${barW}%;background:${b.color};border-radius:6px;display:flex;align-items:center;padding:0 8px;box-sizing:border-box;min-width:90px;">
-            <span style="font-size:12px;font-weight:500;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.label} <span style="font-size:11px;opacity:.75;">${pctStr}</span></span>
-          </div>
+      return `<div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;">
+          <span style="font-size:13px;font-weight:500;color:var(--c7);">${b.label}</span>
+          <span style="font-size:13px;font-weight:600;color:var(--c7);margin-left:8px;white-space:nowrap;">${fmt(b.val)} <span style="font-size:11px;color:var(--c5);font-weight:400;">${pctStr}</span></span>
         </div>
-        <div style="font-size:13px;font-weight:600;color:var(--c7);margin-left:8px;min-width:70px;text-align:right;">${fmt(b.val)}</div>
+        <div style="height:10px;background:var(--c2);border-radius:6px;overflow:hidden;">
+          <div style="height:100%;width:${barW}%;background:${b.color};border-radius:6px;transition:width .4s ease;"></div>
+        </div>
       </div>`;
     }).join('');
   }
@@ -2194,11 +2286,12 @@ const CC_CARDS=[
 function getBills(){ try{return JSON.parse(localStorage.getItem(LS_BILLS)||'[]');}catch{return[];} }
 function saveBills(b){ localStorage.setItem(LS_BILLS,JSON.stringify(b)); }
 
-const CC_BREAKDOWN_CATS=['車相關','出差報帳','個人交際','生活餐飲','娛樂購物','3C類','3C-串流'];
+const CC_BREAKDOWN_CATS=['車子相關','出差報帳','交際送禮','生活餐飲','娛樂購物','3C(含串流訂閱)'];
 
 let ccYear=new Date().getFullYear();
-let ccMonth=new Date().getMonth()+1; // 預設當月
-let ccOpenState={}; // 記錄哪些 card 是展開的
+let ccMonth=new Date().getMonth()+1;
+let ccOpenState={};
+let ccSelectedCat={}; // 每張卡目前選中的分類
 
 function setCCYear(y){ ccYear=y; renderCCPage(); }
 function setCCMonth(m){ ccMonth=m; renderCCPage(); }
@@ -2228,35 +2321,83 @@ function toggleCCAccordion(key){
   renderCCPage();
 }
 
+// 切換分類下拉：直接更新金額與checkbox，不重新渲染整頁
+function onCCCatChange(key, sel){
+  ccSelectedCat[key]=sel.value;
+  const bills=getBills();
+  const bill=bills.find(b=>b.month===key)||{};
+  const entry=(bill.categories||{})[sel.value]||{amount:'',reconciled:false};
+  const row=sel.closest('.cc-cat-row');
+  if(!row) return;
+  const amtEl=row.querySelector('.cc-cat-amt');
+  const cbEl=row.querySelector('.cc-cat-cb');
+  if(amtEl) amtEl.value=(entry.amount!=null&&entry.amount!=='')?entry.amount:'';
+  if(cbEl) cbEl.checked=!!entry.reconciled;
+}
+
+// 儲存分類金額，並刷新 accordion（如果已展開）
+function saveCCCatAmtFromRow(key, input){
+  const cat=ccSelectedCat[key]||CC_BREAKDOWN_CATS[0];
+  _saveCCCatData(key, cat, parseFloat(input.value)||0, null);
+  _refreshAccordion(key);
+}
+
+// 儲存分類已對帳，並刷新 accordion
+function saveCCCatCbFromRow(key, cb){
+  const cat=ccSelectedCat[key]||CC_BREAKDOWN_CATS[0];
+  _saveCCCatData(key, cat, null, cb.checked);
+  _refreshAccordion(key);
+}
+
+function _saveCCCatData(month, cat, amt, reconciled){
+  const bills=getBills();
+  let bill=bills.find(b=>b.month===month);
+  if(!bill){bill={month,billAmount:'',paid:false,categories:{}};bills.push(bill);}
+  if(!bill.categories) bill.categories={};
+  if(!bill.categories[cat]) bill.categories[cat]={amount:'',reconciled:false};
+  if(amt!==null) bill.categories[cat].amount=amt;
+  if(reconciled!==null) bill.categories[cat].reconciled=reconciled;
+  saveBills(bills);
+}
+
+function _refreshAccordion(key){
+  if(!ccOpenState[key]) return;
+  const safeKey=key.replace(/[^a-z0-9]/gi,'_');
+  const el=document.getElementById('cc-acc-'+safeKey);
+  if(!el) return;
+  const bills=getBills();
+  const bill=bills.find(b=>b.month===key)||{categories:{}};
+  el.innerHTML=renderCCBreakdown(key, bill);
+}
+
+// 展開後只顯示有填金額的分類，checkbox 可互動
 function renderCCBreakdown(key, bill){
   const cats=bill.categories||{};
-  let html=`<div style="margin-top:12px;border-top:1px solid var(--c3);padding-top:10px;">
+  const filled=CC_BREAKDOWN_CATS.filter(cat=>cats[cat]&&cats[cat].amount!=null&&cats[cat].amount!==''&&cats[cat].amount!==0);
+  if(!filled.length) return `<div style="margin-top:10px;border-top:1px solid var(--c3);padding:12px 4px 2px;color:var(--c5);font-size:13px;">尚無分類記錄</div>`;
+  let html=`<div style="margin-top:10px;border-top:1px solid var(--c3);padding-top:10px;">
     <table style="width:100%;border-collapse:collapse;font-size:13px;">
       <tr style="color:var(--c5);font-size:12px;">
-        <th style="text-align:left;padding:4px 6px;font-weight:500;">分類</th>
-        <th style="text-align:right;padding:4px 6px;font-weight:500;">金額</th>
-        <th style="text-align:center;padding:4px 6px;font-weight:500;">已對帳</th>
+        <th style="text-align:left;padding:3px 6px;font-weight:500;">分類</th>
+        <th style="text-align:right;padding:3px 6px;font-weight:500;">金額</th>
+        <th style="text-align:center;padding:3px 6px;font-weight:500;">已對帳</th>
       </tr>`;
-  for(const cat of CC_BREAKDOWN_CATS){
-    const entry=cats[cat]||{amount:'',reconciled:false};
+  for(const cat of filled){
+    const entry=cats[cat];
     html+=`<tr style="border-bottom:1px solid var(--c2);">
-      <td style="padding:8px 6px;">${cat}</td>
-      <td style="padding:8px 6px;text-align:right;">
-        <input type="number" inputmode="numeric"
-          style="width:90px;border:1.5px solid var(--c3);border-radius:8px;padding:5px 8px;font-size:13px;text-align:right;font-family:inherit;"
-          placeholder="-" value="${entry.amount!=null&&entry.amount!==''?entry.amount:''}"
-          onchange="saveCCCatAmt('${key}','${cat}',this.value)">
-      </td>
-      <td style="padding:8px 6px;text-align:center;">
+      <td style="padding:7px 6px;">${cat}</td>
+      <td style="padding:7px 6px;text-align:right;font-weight:600;">${fmt(entry.amount)}</td>
+      <td style="padding:7px 6px;text-align:center;">
         <input type="checkbox" class="rec-check" ${entry.reconciled?'checked':''}
-          title="${entry.reconciled?'已對帳':'未對帳'}"
-          onchange="saveCCCatReconciled('${key}','${cat}',this.checked)">
+          onchange="_saveCCCatData('${key}','${cat}',null,this.checked);_refreshAccordion('${key}')">
       </td>
     </tr>`;
   }
   html+=`</table></div>`;
   return html;
 }
+
+const SEL_STYLE=`border:1.5px solid var(--c3);border-radius:8px;padding:6px 28px 6px 10px;font-size:13px;background:white;font-family:inherit;flex:1;min-width:90px;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;`;
 
 function renderCCPage(){
   const el=document.getElementById('cc-content');
@@ -2269,26 +2410,61 @@ function renderCCPage(){
   for(const m of monthsToShow){
     for(const c of CC_CARDS){
       const key=`${c.id}_${ccYear}-${String(m).padStart(2,'0')}`;
+      const safeKey=key.replace(/[^a-z0-9]/gi,'_');
       const bill=bills.find(b=>b.month===key)||{billAmount:'',paid:false,categories:{}};
       const isOpen=ccOpenState[key]||false;
+      const selCat=ccSelectedCat[key]||CC_BREAKDOWN_CATS[0];
+      const catEntry=(bill.categories||{})[selCat]||{amount:'',reconciled:false};
+
+      // 計算分類總金額，與帳單金額比對
+      const catSum=Object.values(bill.categories||{}).reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
+      const billAmt=parseFloat(bill.billAmount)||0;
+      const hasBill=bill.billAmount!=null&&bill.billAmount!=='';
+      const hasCats=catSum>0;
+      const matchBadge=hasBill&&hasCats
+        ? (catSum===billAmt
+          ? `<span style="color:#2563EB;font-weight:700;font-size:12px;margin-left:6px;">OK</span>`
+          : `<span style="color:#DC2626;font-weight:700;font-size:12px;margin-left:6px;">CHECKING</span>`)
+        : '';
+
       html+=`<div class="card" style="margin-bottom:10px;">
-        <div style="display:flex;align-items:center;gap:10px;">
+        <!-- 標題列 -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <div style="width:10px;height:10px;border-radius:50%;background:${c.color};flex-shrink:0;"></div>
           <div style="flex:1;min-width:0;">
-            <span style="font-weight:700;font-size:14px;">${c.owner} ${c.name}</span>
-            <span style="color:var(--c5);font-size:12px;margin-left:6px;">${ccYear}年${m}月</span>
+            <span style="font-weight:700;font-size:14px;">${c.owner} ${c.name}</span>${matchBadge}
           </div>
-          <input type="number" inputmode="numeric"
-            style="width:90px;border:1.5px solid var(--c3);border-radius:8px;padding:5px 8px;font-size:13px;text-align:right;font-family:inherit;flex-shrink:0;"
-            placeholder="繳費金額" value="${bill.billAmount!=null&&bill.billAmount!==''?bill.billAmount:''}"
-            onchange="saveBillAmt('${key}',this.value)">
-          <input type="checkbox" class="rec-check" ${bill.paid?'checked':''}
-            title="${bill.paid?'已繳費':'未繳費'}"
-            onchange="toggleBillPaid('${key}',this.checked)" style="flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+            <input type="number" inputmode="numeric"
+              style="width:90px;border:1.5px solid var(--c3);border-radius:8px;padding:5px 8px;font-size:13px;text-align:right;font-family:inherit;"
+              placeholder="總金額" value="${bill.billAmount!=null&&bill.billAmount!==''?bill.billAmount:''}"
+              onchange="saveBillAmt('${key}',this.value)">
+            <button onclick="clearBillAmt('${key}')" title="清除金額"
+              style="width:24px;height:24px;border-radius:50%;border:1.5px solid var(--c4);background:white;color:var(--c5);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+          </div>
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--c5);flex-shrink:0;cursor:pointer;">
+            已繳<input type="checkbox" class="rec-check" ${bill.paid?'checked':''}
+              onchange="toggleBillPaid('${key}',this.checked)" style="margin-left:2px;">
+          </label>
           <button onclick="toggleCCAccordion('${key}')"
             style="flex-shrink:0;width:28px;height:28px;border-radius:50%;border:2px solid var(--p);background:${isOpen?'var(--p)':'white'};color:${isOpen?'white':'var(--p)'};font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">${isOpen?'−':'+'}</button>
         </div>
-        ${isOpen?renderCCBreakdown(key,bill):''}
+        <!-- 分類快速輸入列（常駐） -->
+        <div class="cc-cat-row" style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          <select style="${SEL_STYLE}" onchange="onCCCatChange('${key}',this)">
+            ${CC_BREAKDOWN_CATS.map(cat=>`<option value="${cat}"${cat===selCat?' selected':''}>${cat}</option>`).join('')}
+          </select>
+          <input class="cc-cat-amt" type="number" inputmode="numeric"
+            style="width:90px;border:1.5px solid var(--c3);border-radius:8px;padding:6px 8px;font-size:13px;text-align:right;font-family:inherit;flex-shrink:0;"
+            placeholder="-" value="${catEntry.amount!=null&&catEntry.amount!==''?catEntry.amount:''}"
+            onchange="saveCCCatAmtFromRow('${key}',this)">
+          <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--c5);flex-shrink:0;cursor:pointer;">
+            已對帳<input class="cc-cat-cb" type="checkbox" ${catEntry.reconciled?'checked':''}
+              onchange="saveCCCatCbFromRow('${key}',this)" style="margin-left:2px;">
+          </label>
+        </div>
+        <!-- accordion：只顯示有填金額的分類 -->
+        <div id="cc-acc-${safeKey}">${isOpen?renderCCBreakdown(key,bill):''}</div>
       </div>`;
     }
   }
@@ -2312,24 +2488,11 @@ function saveBillAmt(month,val){
   saveBills(bills);
 }
 
-function saveCCCatAmt(month,cat,val){
+function clearBillAmt(key){
   const bills=getBills();
-  let bill=bills.find(b=>b.month===month);
-  if(!bill){bill={month,billAmount:'',paid:false,categories:{}};bills.push(bill);}
-  if(!bill.categories) bill.categories={};
-  if(!bill.categories[cat]) bill.categories[cat]={amount:'',reconciled:false};
-  bill.categories[cat].amount=parseFloat(val)||0;
-  saveBills(bills);
-}
-
-function saveCCCatReconciled(month,cat,checked){
-  const bills=getBills();
-  let bill=bills.find(b=>b.month===month);
-  if(!bill){bill={month,billAmount:'',paid:false,categories:{}};bills.push(bill);}
-  if(!bill.categories) bill.categories={};
-  if(!bill.categories[cat]) bill.categories[cat]={amount:'',reconciled:false};
-  bill.categories[cat].reconciled=checked;
-  saveBills(bills);
+  const idx=bills.findIndex(b=>b.month===key);
+  if(idx>=0){ bills[idx].billAmount=''; saveBills(bills); }
+  renderCCPage();
 }
 
 // ============================================================
