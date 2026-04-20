@@ -2034,7 +2034,6 @@ function renderQuarterly(){
     html+=`<div class="card"><div class="card-t">📅 與上一季比較（vs ${prevQYear}年Q${prevQ}）</div>
       <div class="scroll-x"><table class="tbl">
         <tr><th>項目</th><th>${prevQYear}年Q${prevQ}</th><th>${curYear}年Q${curQ}</th><th>差異</th></tr>
-        <tr><td style="text-align:left;color:var(--g);">收入</td><td>${fmt(pqTotInc)}</td><td>${fmt(totInc)}</td>${diffCell(totInc-pqTotInc,pqTotInc,clrIncQ)}</tr>
         <tr><td style="text-align:left;">固定支出</td><td>${fmt(pqTotFixed)}</td><td>${fmt(curFixed)}</td>${diffCell(curFixed-pqTotFixed,pqTotFixed,clrQ)}</tr>
         <tr><td style="text-align:left;">生活支出</td><td>${fmt(pqTotVar)}</td><td>${fmt(curVar)}</td>${diffCell(curVar-pqTotVar,pqTotVar,clrQ)}</tr>
         <tr class="tot"><td style="text-align:left;color:var(--r);">支出合計</td><td>${fmt(pqTotExp)}</td><td>${fmt(totExp)}</td>${diffCell(totExp-pqTotExp,pqTotExp,clrQ)}</tr>
@@ -2054,7 +2053,6 @@ function renderQuarterly(){
     html+=`<div class="card"><div class="card-t">📅 與去年同季比較（vs ${curYear-1}年Q${curQ}）</div>
       <div class="scroll-x"><table class="tbl">
         <tr><th>項目</th><th>${curYear-1}年Q${curQ}</th><th>${curYear}年Q${curQ}</th><th>差異</th></tr>
-        <tr><td style="text-align:left;color:var(--g);">收入</td><td>${fmt(prevTotInc)}</td><td>${fmt(totInc)}</td>${diffCell(totInc-prevTotInc,prevTotInc,clrIncQ)}</tr>
         <tr><td style="text-align:left;">固定支出</td><td>${fmt(prevTotFixed)}</td><td>${fmt(curFixed)}</td>${diffCell(curFixed-prevTotFixed,prevTotFixed,clrQ)}</tr>
         <tr><td style="text-align:left;">生活支出</td><td>${fmt(prevTotVar)}</td><td>${fmt(curVar)}</td>${diffCell(curVar-prevTotVar,prevTotVar,clrQ)}</tr>
         <tr class="tot"><td style="text-align:left;color:var(--r);">支出合計</td><td>${fmt(prevTotExp)}</td><td>${fmt(totExp)}</td>${diffCell(totExp-prevTotExp,prevTotExp,clrQ)}</tr>
@@ -2196,8 +2194,11 @@ const CC_CARDS=[
 function getBills(){ try{return JSON.parse(localStorage.getItem(LS_BILLS)||'[]');}catch{return[];} }
 function saveBills(b){ localStorage.setItem(LS_BILLS,JSON.stringify(b)); }
 
+const CC_BREAKDOWN_CATS=['車相關','出差報帳','個人交際','生活餐飲','娛樂購物','3C類','3C-串流'];
+
 let ccYear=new Date().getFullYear();
 let ccMonth=new Date().getMonth()+1; // 預設當月
+let ccOpenState={}; // 記錄哪些 card 是展開的
 
 function setCCYear(y){ ccYear=y; renderCCPage(); }
 function setCCMonth(m){ ccMonth=m; renderCCPage(); }
@@ -2222,63 +2223,83 @@ function toggleReconcile(id){
   renderRecent();
 }
 
+function toggleCCAccordion(key){
+  ccOpenState[key]=!ccOpenState[key];
+  renderCCPage();
+}
+
+function renderCCBreakdown(key, bill){
+  const cats=bill.categories||{};
+  let html=`<div style="margin-top:12px;border-top:1px solid var(--c3);padding-top:10px;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <tr style="color:var(--c5);font-size:12px;">
+        <th style="text-align:left;padding:4px 6px;font-weight:500;">分類</th>
+        <th style="text-align:right;padding:4px 6px;font-weight:500;">金額</th>
+        <th style="text-align:center;padding:4px 6px;font-weight:500;">已對帳</th>
+      </tr>`;
+  for(const cat of CC_BREAKDOWN_CATS){
+    const entry=cats[cat]||{amount:'',reconciled:false};
+    html+=`<tr style="border-bottom:1px solid var(--c2);">
+      <td style="padding:8px 6px;">${cat}</td>
+      <td style="padding:8px 6px;text-align:right;">
+        <input type="number" inputmode="numeric"
+          style="width:90px;border:1.5px solid var(--c3);border-radius:8px;padding:5px 8px;font-size:13px;text-align:right;font-family:inherit;"
+          placeholder="-" value="${entry.amount!=null&&entry.amount!==''?entry.amount:''}"
+          onchange="saveCCCatAmt('${key}','${cat}',this.value)">
+      </td>
+      <td style="padding:8px 6px;text-align:center;">
+        <input type="checkbox" class="rec-check" ${entry.reconciled?'checked':''}
+          title="${entry.reconciled?'已對帳':'未對帳'}"
+          onchange="saveCCCatReconciled('${key}','${cat}',this.checked)">
+      </td>
+    </tr>`;
+  }
+  html+=`</table></div>`;
+  return html;
+}
 
 function renderCCPage(){
   const el=document.getElementById('cc-content');
   if(!el) return;
   populateCCFilter();
   const bills=getBills();
-
-  // Months to display
   const monthsToShow=ccMonth===0?Array.from({length:12},(_,i)=>i+1):[ccMonth];
 
-  let html=`<div class="card" style="overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:340px;">
-      <tr style="background:var(--p);color:white;">
-        <th style="padding:9px 10px;text-align:center;font-weight:600;">年</th>
-        <th style="padding:9px 10px;text-align:center;font-weight:600;">月</th>
-        <th style="padding:9px 10px;text-align:left;font-weight:600;">卡別</th>
-        <th style="padding:9px 10px;text-align:right;font-weight:600;">繳費金額</th>
-        <th style="padding:9px 10px;text-align:center;font-weight:600;">已繳費</th>
-      </tr>`;
-
-  let rowIdx=0;
+  let html='';
   for(const m of monthsToShow){
     for(const c of CC_CARDS){
       const key=`${c.id}_${ccYear}-${String(m).padStart(2,'0')}`;
-      const bill=bills.find(b=>b.month===key)||{billAmount:'',paid:false};
-      const bg=rowIdx%2===0?'':'background:var(--c1);';
-      html+=`<tr style="border-bottom:1px solid var(--c2);${bg}">
-        <td style="padding:8px 10px;text-align:center;color:var(--c5);">${ccYear}</td>
-        <td style="padding:8px 10px;text-align:center;color:var(--c5);white-space:nowrap;">${m}月</td>
-        <td style="padding:8px 10px;">
-          <span style="color:${c.color};font-weight:700;font-size:12px;">${c.owner}</span>
-          <span style="font-size:13px;"> ${c.name}</span>
-        </td>
-        <td style="padding:8px 10px;text-align:right;">
+      const bill=bills.find(b=>b.month===key)||{billAmount:'',paid:false,categories:{}};
+      const isOpen=ccOpenState[key]||false;
+      html+=`<div class="card" style="margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:10px;height:10px;border-radius:50%;background:${c.color};flex-shrink:0;"></div>
+          <div style="flex:1;min-width:0;">
+            <span style="font-weight:700;font-size:14px;">${c.owner} ${c.name}</span>
+            <span style="color:var(--c5);font-size:12px;margin-left:6px;">${ccYear}年${m}月</span>
+          </div>
           <input type="number" inputmode="numeric"
-            style="width:90px;border:1.5px solid var(--c3);border-radius:8px;padding:5px 8px;font-size:13px;text-align:right;font-family:inherit;"
-            placeholder="-" value="${bill.billAmount!=null&&bill.billAmount!==''?bill.billAmount:''}"
+            style="width:90px;border:1.5px solid var(--c3);border-radius:8px;padding:5px 8px;font-size:13px;text-align:right;font-family:inherit;flex-shrink:0;"
+            placeholder="繳費金額" value="${bill.billAmount!=null&&bill.billAmount!==''?bill.billAmount:''}"
             onchange="saveBillAmt('${key}',this.value)">
-        </td>
-        <td style="padding:8px 10px;text-align:center;">
           <input type="checkbox" class="rec-check" ${bill.paid?'checked':''}
             title="${bill.paid?'已繳費':'未繳費'}"
-            onchange="toggleBillPaid('${key}',this.checked)">
-        </td>
-      </tr>`;
-      rowIdx++;
+            onchange="toggleBillPaid('${key}',this.checked)" style="flex-shrink:0;">
+          <button onclick="toggleCCAccordion('${key}')"
+            style="flex-shrink:0;width:28px;height:28px;border-radius:50%;border:2px solid var(--p);background:${isOpen?'var(--p)':'white'};color:${isOpen?'white':'var(--p)'};font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">${isOpen?'−':'+'}</button>
+        </div>
+        ${isOpen?renderCCBreakdown(key,bill):''}
+      </div>`;
     }
   }
-  html+=`</table></div>`;
-  el.innerHTML=html;
+  el.innerHTML=html||'<div class="es">無資料</div>';
 }
 
 function toggleBillPaid(key,checked){
   const bills=getBills();
   const idx=bills.findIndex(b=>b.month===key);
   if(idx>=0) bills[idx].paid=checked;
-  else bills.push({month:key,billAmount:0,paid:checked});
+  else bills.push({month:key,billAmount:'',paid:checked,categories:{}});
   saveBills(bills);
 }
 
@@ -2287,7 +2308,27 @@ function saveBillAmt(month,val){
   const idx=bills.findIndex(b=>b.month===month);
   const amt=parseFloat(val)||0;
   if(idx>=0) bills[idx].billAmount=amt;
-  else bills.push({month,billAmount:amt});
+  else bills.push({month,billAmount:amt,paid:false,categories:{}});
+  saveBills(bills);
+}
+
+function saveCCCatAmt(month,cat,val){
+  const bills=getBills();
+  let bill=bills.find(b=>b.month===month);
+  if(!bill){bill={month,billAmount:'',paid:false,categories:{}};bills.push(bill);}
+  if(!bill.categories) bill.categories={};
+  if(!bill.categories[cat]) bill.categories[cat]={amount:'',reconciled:false};
+  bill.categories[cat].amount=parseFloat(val)||0;
+  saveBills(bills);
+}
+
+function saveCCCatReconciled(month,cat,checked){
+  const bills=getBills();
+  let bill=bills.find(b=>b.month===month);
+  if(!bill){bill={month,billAmount:'',paid:false,categories:{}};bills.push(bill);}
+  if(!bill.categories) bill.categories={};
+  if(!bill.categories[cat]) bill.categories[cat]={amount:'',reconciled:false};
+  bill.categories[cat].reconciled=checked;
   saveBills(bills);
 }
 
