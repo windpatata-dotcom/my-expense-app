@@ -6,7 +6,7 @@
 <title>蘋果家記帳</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://accounts.google.com/gsi/clhient" async defer></script>
 <style>
 :root{--p:#6366F1;--pl:#EEF2FF;--g:#10B981;--r:#EF4444;--w:#F59E0B;--c1:#F9FAFB;--c2:#F3F4F6;--c3:#E5E7EB;--c4:#D1D5DB;--c5:#6B7280;--c7:#374151;--c9:#111827;}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
@@ -1413,7 +1413,7 @@ function submitEntry(){
         while(mIdx>12){mIdx-=12;yIdx++;}
         const mStr=String(mIdx).padStart(2,'0');
         const mAmt=i===spreadCount-1?rem:perM;
-        const mDate=`${yIdx}-${mStr}-01`;
+        const mDate=`${yIdx}-${mStr}-${date.split('-')[2]}`;
         txns.unshift({id:uid(),date:mDate,type:'expense',cat:selCat,sub,item,
           amount:mAmt,payment:selPayment,note,spreadId:sId,
           spreadInfo:`第${i+1}攤/共${spreadCount}攤（總額${amt.toLocaleString('zh-TW')}）`,reconciled:false});
