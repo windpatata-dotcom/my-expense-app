@@ -1419,6 +1419,7 @@ function submitEntry(){
           spreadInfo:`第${i+1}攤/共${spreadCount}攤（總額${amt.toLocaleString('zh-TW')}）`,reconciled:false});
       }
       toast(`✓ 已分攤為 ${spreadCount} 筆記錄`);
+      recentFilterYear=sy; recentFilterMonth=null;
     } else {
       txns.unshift({id:uid(),date,type:'expense',cat:selCat,sub,item,
         amount:amt,payment:selPayment,note,reconciled:false});
