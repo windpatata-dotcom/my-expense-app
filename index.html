@@ -1455,6 +1455,7 @@ function submitEntry(){
   }
   const _now=new Date();
   recentFilterYear=_now.getFullYear(); recentFilterMonth=_now.getMonth()+1;
+  recentSearch='';
   renderRecent();
   const recentCard = document.getElementById('recent-list')?.closest('.card');
   const scrollTarget = recentCard || document.getElementById('recent-list');
@@ -1462,6 +1463,7 @@ function submitEntry(){
 }
 
 let recentFilterYear=new Date().getFullYear(), recentFilterMonth=new Date().getMonth()+1;
+let recentSearch='';
 
 function getAvailableYears(){
   const yrs=new Set();
@@ -1569,11 +1571,19 @@ function renderRecentFilter(){
   const yrs=getAvailableYears();
   const yrOpts=`<option value="">年份</option>`+yrs.map(y=>`<option value="${y}"${recentFilterYear===y?' selected':''}>${y}年</option>`).join('');
   const moOpts=`<option value="">月份</option>`+Array.from({length:12},(_,i)=>`<option value="${i+1}"${recentFilterMonth===i+1?' selected':''}>${i+1}月</option>`).join('');
-  return `<div class="ym-filter" style="margin-bottom:10px;">
+  const hasClear=recentFilterYear||recentFilterMonth||recentSearch;
+  return `<div class="ym-filter" style="margin-bottom:10px;flex-wrap:wrap;row-gap:6px;">
     <label>歷史查詢</label>
     <select onchange="recentFilterYear=this.value?+this.value:null;renderRecent()">${yrOpts}</select>
     <select onchange="recentFilterMonth=this.value?+this.value:null;renderRecent()">${moOpts}</select>
-    ${recentFilterYear||recentFilterMonth?`<button class="btn2" style="padding:4px 10px;font-size:12px;" onclick="recentFilterYear=null;recentFilterMonth=null;renderRecent()">✕ 清除</button>`:''}
+    <div style="position:relative;flex:1;min-width:120px;">
+      <input id="recent-search-inp" type="text" placeholder="🔍 搜尋…" value="${recentSearch.replace(/"/g,'&quot;')}"
+        oninput="recentSearch=this.value;renderRecent();document.getElementById('recent-search-inp')?.focus()"
+        style="width:100%;border:1.5px solid var(--c3);border-radius:8px;padding:5px 28px 5px 8px;font-size:13px;font-family:inherit;outline:none;background:white;color:var(--c9);"
+        onfocus="this.style.borderColor='var(--p)'" onblur="this.style.borderColor='var(--c3)'">
+      ${recentSearch?`<span onclick="recentSearch='';renderRecent()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:13px;color:var(--c5);">✕</span>`:''}
+    </div>
+    ${hasClear?`<button class="btn2" style="padding:4px 10px;font-size:12px;" onclick="recentFilterYear=null;recentFilterMonth=null;recentSearch='';renderRecent()">✕ 清除</button>`:''}
   </div>`;
 }
 
@@ -1631,13 +1641,18 @@ function renderRecent(){
     el.innerHTML=filterBar+`<div class="es"><div class="ei">📝</div>還沒有記錄<br>開始記帳吧！</div>`;
     return;
   }
-  const isFiltered=recentFilterYear||recentFilterMonth;
+  const isFiltered=recentFilterYear||recentFilterMonth||recentSearch;
   let shown;
   if(isFiltered){
+    const kw=recentSearch.trim().toLowerCase();
     shown=pool.filter(r=>{
       const [y,m]=r.date.split('-').map(Number);
       if(recentFilterYear&&y!==recentFilterYear) return false;
       if(recentFilterMonth&&m!==recentFilterMonth) return false;
+      if(kw){
+        const haystack=[r.item||'',r.source||'',r.note||'',r.sub||''].join(' ').toLowerCase();
+        if(!haystack.includes(kw)) return false;
+      }
       return true;
     });
   } else {
@@ -1648,7 +1663,7 @@ function renderRecent(){
   const footer=!isFiltered&&pool.length>20
     ?`<div style="text-align:center;padding:10px 0;font-size:13px;color:var(--c5);">顯示最近 20 筆${typeLabel}（共 ${pool.length} 筆）<br>可用上方下拉式選單查詢歷史記錄</div>`
     :isFiltered&&shown.length===0
-    ?`<div class="es"><div class="ei">🔍</div>此期間沒有${typeLabel}記錄</div>`
+    ?`<div class="es"><div class="ei">🔍</div>查無符合的記錄</div>`
     :'';
   el.innerHTML=filterBar+rows+footer;
 }
