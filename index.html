@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<style>h
+<style>
 :root{--p:#6366F1;--pl:#EEF2FF;--g:#10B981;--r:#EF4444;--w:#F59E0B;--c1:#F9FAFB;--c2:#F3F4F6;--c3:#E5E7EB;--c4:#D1D5DB;--c5:#6B7280;--c7:#374151;--c9:#111827;}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
 body{font-family:-apple-system,BlinkMacSystemFont,'PingFang TC','Noto Sans TC','Segoe UI',sans-serif;background:var(--c2);color:var(--c9);padding-bottom:72px;font-size:15px;min-height:100vh;}
@@ -1578,6 +1578,7 @@ function renderRecentFilter(){
     <select onchange="recentFilterMonth=this.value?+this.value:null;renderRecent()">${moOpts}</select>
     <div style="position:relative;flex:1;min-width:120px;">
       <input id="recent-search-inp" type="text" placeholder="🔍 搜尋…" value="${recentSearch.replace(/"/g,'&quot;')}"
+        oninput="recentSearch=this.value;renderRecent();document.getElementById('recent-search-inp')?.focus()"
         style="width:100%;border:1.5px solid var(--c3);border-radius:8px;padding:5px 28px 5px 8px;font-size:13px;font-family:inherit;outline:none;background:white;color:var(--c9);"
         onfocus="this.style.borderColor='var(--p)'" onblur="this.style.borderColor='var(--c3)'">
       ${recentSearch?`<span onclick="recentSearch='';renderRecent()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:13px;color:var(--c5);">✕</span>`:''}
@@ -2836,13 +2837,6 @@ document.getElementById('month-display').textContent=`${curYear}年 ${MONTHS_TW[
   if(window.google?.accounts?.oauth2){ initGDrive(); gAutoSignIn(); }
   else { setTimeout(tryInitGDrive, 400); }
 })();
-  // IME fix: 中文輸入法搜尋修正
-  (function(){
-    var inp=document.getElementById('recent-search-inp');
-    if(!inp)return;
-    inp.addEventListener('input',function(e){if(e.isComposing)return;recentSearch=inp.value;renderRecent();});
-    inp.addEventListener('compositionend',function(){recentSearch=inp.value;renderRecent();});
-  })();
 </script>
 </body>
 </html>
