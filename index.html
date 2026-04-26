@@ -1576,7 +1576,7 @@ function renderRecentFilter(){
     <label>歷史查詢</label>
     <select onchange="recentFilterYear=this.value?+this.value:null;renderRecent()">${yrOpts}</select>
     <select onchange="recentFilterMonth=this.value?+this.value:null;renderRecent()">${moOpts}</select>
-    ${hasClear?`<button class="btn2" style="padding:4px 10px;font-size:12px;" onclick="recentFilterYear=null;recentFilterMonth=null;recentSearch='';renderRecent()">✕ 清除</button>`:''}
+    ${hasClear?`<button class="btn2" style="padding:4px 10px;font-size:12px;" onclick="const _n=new Date();recentFilterYear=_n.getFullYear();recentFilterMonth=_n.getMonth()+1;recentSearch='';renderRecent()">✕ 清除</button>`:''}
   </div>
   <div class="fg" style="margin-bottom:10px;display:flex;align-items:center;gap:8px;">
     <label class="fl" style="margin-bottom:0;white-space:nowrap;">搜尋</label>
@@ -1657,7 +1657,8 @@ function renderRecentResults(){
       if(recentFilterYear&&y!==recentFilterYear) return false;
       if(recentFilterMonth&&m!==recentFilterMonth) return false;
       if(kw){
-        const haystack=[r.item||'',r.source||''].join(' ').toLowerCase();
+        const pmLabel=getAllPayments().find(p=>p.id===r.payment)?.label||'';
+        const haystack=[r.item||'',pmLabel].join(' ').toLowerCase();
         if(!haystack.includes(kw)) return false;
       }
       return true;
