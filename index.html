@@ -1464,6 +1464,7 @@ function submitEntry(){
 
 let recentFilterYear=new Date().getFullYear(), recentFilterMonth=new Date().getMonth()+1;
 let recentSearch='';
+let _imeOn=false;
 
 function getAvailableYears(){
   const yrs=new Set();
@@ -1582,7 +1583,10 @@ function renderRecentFilter(){
     <label class="fl" style="margin-bottom:0;white-space:nowrap;">搜尋</label>
     <div style="position:relative;flex:1;">
       <input class="fi" id="recent-search-inp" type="text" placeholder="輸入關鍵字，例：作文" value="${recentSearch.replace(/"/g,'&quot;')}"
-        oninput="recentSearch=this.value;const _p=this.selectionStart;renderRecent();const _i=document.getElementById('recent-search-inp');if(_i){_i.focus();_i.setSelectionRange(_p,_p);}">
+        oncompositionstart="_imeOn=true"
+        oncompositionend="_imeOn=false;recentSearch=this.value;const _p=this.selectionStart;renderRecent();const _i=document.getElementById('recent-search-inp');if(_i){_i.focus();_i.setSelectionRange(_p,_p);}"
+        oninput="if(!_imeOn){recentSearch=this.value;const _p=this.selectionStart;renderRecent();const _i=document.getElementById('recent-search-inp');if(_i){_i.focus();_i.setSelectionRange(_p,_p);}}"
+      >
       ${recentSearch?`<span onclick="recentSearch='';renderRecent()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--c5);">✕</span>`:''}
     </div>
   </div>`;
