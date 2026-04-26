@@ -217,7 +217,7 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   <!-- Recent -->
   <div class="card">
     <div class="card-t">最近記錄</div>
-    <div id="recent-list"></div>
+    <div id="recent-list"><div id="recent-filter-bar"></div><div id="recent-results"></div></div>
   </div>
 </div>
 
@@ -1464,7 +1464,6 @@ function submitEntry(){
 
 let recentFilterYear=new Date().getFullYear(), recentFilterMonth=new Date().getMonth()+1;
 let recentSearch='';
-let _imeOn=false;
 
 function getAvailableYears(){
   const yrs=new Set();
@@ -1583,9 +1582,8 @@ function renderRecentFilter(){
     <label class="fl" style="margin-bottom:0;white-space:nowrap;">搜尋</label>
     <div style="position:relative;flex:1;">
       <input class="fi" id="recent-search-inp" type="text" placeholder="輸入關鍵字，例：作文" value="${recentSearch.replace(/"/g,'&quot;')}"
-        oncompositionstart="_imeOn=true"
-        oncompositionend="_imeOn=false;recentSearch=this.value;const _p=this.selectionStart;renderRecent();const _i=document.getElementById('recent-search-inp');if(_i){_i.focus();_i.setSelectionRange(_p,_p);}"
-        oninput="if(!_imeOn){recentSearch=this.value;const _p=this.selectionStart;renderRecent();const _i=document.getElementById('recent-search-inp');if(_i){_i.focus();_i.setSelectionRange(_p,_p);}}"
+        oninput="recentSearch=this.value;renderRecentResults()"
+        onchange="recentSearch=this.value;renderRecentResults()"
       >
       ${recentSearch?`<span onclick="recentSearch='';renderRecent()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--c5);">✕</span>`:''}
     </div>
@@ -1627,9 +1625,7 @@ function renderRecentRow(r){
   </div>`;
 }
 
-function renderRecent(){
-  const el=document.getElementById('recent-list');
-  // Build pool based on current entryType
+function _buildPool(){
   let pool;
   if(entryType==='income'){
     pool=getIncs().map(i=>({...i,_kind:'i'}));
@@ -1641,9 +1637,15 @@ function renderRecent(){
     pool=[...getTxns().map(t=>({...t,_kind:'t'})),...getIncs().map(i=>({...i,_kind:'i'}))];
   }
   pool.sort((a,b)=>b.date.localeCompare(a.date));
-  const filterBar=renderRecentFilter();
+  return pool;
+}
+
+function renderRecentResults(){
+  const res=document.getElementById('recent-results');
+  if(!res) return;
+  const pool=_buildPool();
   if(!pool.length){
-    el.innerHTML=filterBar+`<div class="es"><div class="ei">📝</div>還沒有記錄<br>開始記帳吧！</div>`;
+    res.innerHTML=`<div class="es"><div class="ei">📝</div>還沒有記錄<br>開始記帳吧！</div>`;
     return;
   }
   const isFiltered=recentFilterYear||recentFilterMonth||recentSearch;
@@ -1670,7 +1672,13 @@ function renderRecent(){
     :isFiltered&&shown.length===0
     ?`<div class="es"><div class="ei">🔍</div>查無符合的記錄</div>`
     :'';
-  el.innerHTML=filterBar+rows+footer;
+  res.innerHTML=rows+footer;
+}
+
+function renderRecent(){
+  const fb=document.getElementById('recent-filter-bar');
+  if(fb) fb.innerHTML=renderRecentFilter();
+  renderRecentResults();
 }
 
 // ── Spread group helpers ─────────────────────────────────────
