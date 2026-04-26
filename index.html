@@ -1657,7 +1657,7 @@ function renderRecentResults(){
       if(recentFilterYear&&y!==recentFilterYear) return false;
       if(recentFilterMonth&&m!==recentFilterMonth) return false;
       if(kw){
-        const haystack=[r.item||'',r.source||'',r.note||'',r.sub||''].join(' ').toLowerCase();
+        const haystack=[r.item||'',r.source||''].join(' ').toLowerCase();
         if(!haystack.includes(kw)) return false;
       }
       return true;
