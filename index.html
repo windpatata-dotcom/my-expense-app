@@ -1572,18 +1572,19 @@ function renderRecentFilter(){
   const yrOpts=`<option value="">年份</option>`+yrs.map(y=>`<option value="${y}"${recentFilterYear===y?' selected':''}>${y}年</option>`).join('');
   const moOpts=`<option value="">月份</option>`+Array.from({length:12},(_,i)=>`<option value="${i+1}"${recentFilterMonth===i+1?' selected':''}>${i+1}月</option>`).join('');
   const hasClear=recentFilterYear||recentFilterMonth||recentSearch;
-  return `<div class="ym-filter" style="margin-bottom:10px;flex-wrap:wrap;row-gap:6px;">
+  return `<div class="ym-filter" style="margin-bottom:10px;">
     <label>歷史查詢</label>
     <select onchange="recentFilterYear=this.value?+this.value:null;renderRecent()">${yrOpts}</select>
     <select onchange="recentFilterMonth=this.value?+this.value:null;renderRecent()">${moOpts}</select>
-    <div style="position:relative;flex:1;min-width:120px;">
-      <input id="recent-search-inp" type="text" placeholder="🔍 搜尋…" value="${recentSearch.replace(/"/g,'&quot;')}"
-        oninput="recentSearch=this.value;const _p=this.selectionStart;renderRecent();const _i=document.getElementById('recent-search-inp');if(_i){_i.focus();_i.setSelectionRange(_p,_p);}"
-        style="width:100%;border:1.5px solid var(--c3);border-radius:8px;padding:5px 28px 5px 8px;font-size:13px;font-family:inherit;outline:none;background:white;color:var(--c9);"
-        onfocus="this.style.borderColor='var(--p)'" onblur="this.style.borderColor='var(--c3)'">
-      ${recentSearch?`<span onclick="recentSearch='';renderRecent()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:13px;color:var(--c5);">✕</span>`:''}
-    </div>
     ${hasClear?`<button class="btn2" style="padding:4px 10px;font-size:12px;" onclick="recentFilterYear=null;recentFilterMonth=null;recentSearch='';renderRecent()">✕ 清除</button>`:''}
+  </div>
+  <div class="fg" style="margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+    <label class="fl" style="margin-bottom:0;white-space:nowrap;">搜尋</label>
+    <div style="position:relative;flex:1;">
+      <input class="fi" id="recent-search-inp" type="text" placeholder="輸入關鍵字，例：作文" value="${recentSearch.replace(/"/g,'&quot;')}"
+        oninput="recentSearch=this.value;const _p=this.selectionStart;renderRecent();const _i=document.getElementById('recent-search-inp');if(_i){_i.focus();_i.setSelectionRange(_p,_p);}">
+      ${recentSearch?`<span onclick="recentSearch='';renderRecent()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--c5);">✕</span>`:''}
+    </div>
   </div>`;
 }
 
