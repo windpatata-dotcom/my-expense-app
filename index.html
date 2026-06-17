@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>蘋果家記帳</title>
+<title>RJ's Life</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -148,8 +148,40 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .big-info{flex:1;min-width:0;}
 .big-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .big-meta{font-size:12px;color:var(--c5);margin-top:1px;}
-/* Nav — 6 tabs */
-@media(max-width:600px){.ni{font-size:10px;}.ni .ic{font-size:20px;}}
+/* Nav — 8 tabs */
+@media(max-width:600px){.ni{font-size:9px;padding:6px 2px;}.ni .ic{font-size:19px;}}
+@media(max-width:400px){.ni{font-size:8px;padding:5px 1px;}.ni .ic{font-size:17px;}}
+/* Diet & Exercise screens */
+.de-table{width:100%;border-collapse:collapse;font-size:13px;}
+.de-table th{background:var(--pl);color:var(--p);padding:8px 6px;text-align:left;font-weight:600;border-bottom:2px solid var(--c3);white-space:nowrap;}
+.de-table td{padding:8px 6px;border-bottom:1px solid var(--c2);vertical-align:top;}
+.de-table tr:last-child td{border-bottom:none;}
+.de-table tr:hover td{background:var(--c1);}
+.diet-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.meal-早餐{background:#FEF9C3;color:#854D0E;}
+.meal-午餐{background:#D1FAE5;color:#065F46;}
+.meal-晚餐{background:#EDE9FE;color:#5B21B6;}
+.meal-點心{background:#FFE4E6;color:#9F1239;}
+.fast-badge{background:#EFF6FF;color:#1D4ED8;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;}
+.body-card{background:linear-gradient(135deg,#6366F1,#8B5CF6);border-radius:20px;padding:20px;color:white;margin-bottom:16px;}
+.body-stat{text-align:center;}
+.body-stat .bs-val{font-size:24px;font-weight:800;}
+.body-stat .bs-lbl{font-size:11px;opacity:.8;margin-top:2px;}
+.goal-bar-wrap{background:rgba(255,255,255,0.25);border-radius:99px;height:10px;margin-top:8px;}
+.goal-bar-fill{background:white;height:10px;border-radius:99px;transition:width .6s ease;}
+.msg-bubble{border-radius:16px;padding:14px 16px;margin-bottom:16px;font-size:14px;line-height:1.6;font-weight:500;}
+.msg-green{background:#D1FAE5;color:#065F46;}
+.msg-blue{background:#DBEAFE;color:#1D4ED8;}
+.msg-yellow{background:#FEF9C3;color:#854D0E;}
+.msg-orange{background:#FFEDD5;color:#9A3412;}
+.ex-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:600;}
+.ex-跑步{background:#DBEAFE;color:#1E40AF;}
+.ex-肌力{background:#FCE7F3;color:#9D174D;}
+.ex-拳擊有氧{background:#FFEDD5;color:#9A3412;}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.stat-box{background:white;border-radius:14px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);text-align:center;}
+.stat-box .sv{font-size:20px;font-weight:800;color:var(--p);}
+.stat-box .sl{font-size:11px;color:var(--c5);margin-top:2px;}
 @media(max-width:400px){.sum3{gap:6px;}.scard .sv{font-size:14px;}}
 /* Amount input row */
 .amt-wrap{display:flex;gap:8px;align-items:stretch;}
@@ -264,6 +296,168 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   <div id="settings-content"></div>
 </div>
 
+<!-- ===== 飲控 screen ===== -->
+<div id="s-diet" class="screen">
+  <div class="screen-header">飲控 🥗</div>
+
+  <!-- Add form -->
+  <div class="card" id="diet-form-card">
+    <div class="card-t">新增記錄</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="fg"><label class="fl">① 日期</label><input class="fi" type="date" id="df-date"></div>
+      <div class="fg"><label class="fl">② 餐別</label>
+        <select class="fi" id="df-meal">
+          <option value="早餐">早餐</option>
+          <option value="午餐">午餐</option>
+          <option value="晚餐" selected>晚餐</option>
+          <option value="點心">點心</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">③ 蛋白質食物（如：雞胸肉100g、水煮蛋2顆）</label><input class="fi" type="text" id="df-protein-food" placeholder="填入蛋白質來源食物" onblur="estimateProtein()"></div>
+    <div class="fg"><label class="fl">④ 碳水食物（如：白飯一碗、吐司2片）</label><input class="fi" type="text" id="df-carb-food" placeholder="填入碳水來源食物" onblur="estimateProtein()"></div>
+    <div class="fg"><label class="fl">⑤ 其他（蔬菜、水果等）</label><input class="fi" type="text" id="df-other" placeholder="其他食物" onblur="estimateProtein()"></div>
+    <div class="fg">
+      <label class="fl" style="display:flex;align-items:center;gap:6px;">
+        ⑥ 預估蛋白質量（克）
+        <span id="df-pg-badge" style="display:none;font-size:10px;background:var(--pl);color:var(--p);padding:2px 7px;border-radius:99px;font-weight:600;">自動估算</span>
+        <button type="button" onclick="openProteinDB()" title="編輯蛋白質資料庫"
+          style="width:22px;height:22px;border-radius:50%;border:1.5px solid var(--c3);background:white;cursor:pointer;font-size:13px;line-height:1;display:inline-flex;align-items:center;justify-content:center;color:var(--c5);flex-shrink:0;padding:0;">📋</button>
+      </label>
+      <div style="position:relative;">
+        <input class="fi" type="number" id="df-protein-g" placeholder="— 填入③④⑤後自動估算 —" min="0" step="0.1" style="padding-right:70px;">
+        <button type="button" onclick="estimateProtein()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:11px;padding:4px 8px;background:var(--pl);color:var(--p);border:none;border-radius:8px;cursor:pointer;font-weight:600;">重新估算</button>
+      </div>
+      <div id="df-pg-detail" style="font-size:11px;color:var(--c5);margin-top:4px;line-height:1.5;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="fg">
+        <label class="fl">⑦ 當天最後一餐時間</label>
+        <select class="fi" id="df-last-time" onchange="calcFasting()">
+          <option value="">-- 選擇時間 --</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">⑧ 當天第一餐時間</label>
+        <select class="fi" id="df-first-time" onchange="calcFasting()">
+          <option value="">-- 選擇時間 --</option>
+        </select>
+      </div>
+    </div>
+    <div id="df-fasting-preview" style="display:none;margin-bottom:12px;"></div>
+    <button class="btn1" onclick="saveDietEntry()">💾 儲存記錄</button>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="card-t" style="margin:0;">飲食記錄</div>
+      <select class="fi" style="width:auto;font-size:12px;padding:5px 28px 5px 8px;" id="diet-filter-month" onchange="renderDiet()">
+        <option value="all">全部</option>
+      </select>
+    </div>
+    <div id="diet-log"></div>
+  </div>
+</div>
+
+<!-- ===== 運動 screen ===== -->
+<div id="s-exercise" class="screen">
+  <div class="screen-header">運動 💪</div>
+
+  <!-- Body stats card -->
+  <div class="body-card" id="ex-body-card">
+    <div style="font-size:13px;font-weight:600;opacity:.8;margin-bottom:12px;">體態追蹤 · 目標減重 3kg</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;" id="ex-stats-display">
+      <div class="body-stat"><div class="bs-val" id="ex-weight">--</div><div class="bs-lbl">體重 kg</div></div>
+      <div class="body-stat"><div class="bs-val" id="ex-bmi">--</div><div class="bs-lbl">BMI</div></div>
+      <div class="body-stat"><div class="bs-val" id="ex-fat">--</div><div class="bs-lbl">體脂 %</div></div>
+      <div class="body-stat"><div class="bs-val" id="ex-muscle">--</div><div class="bs-lbl">肌肉量 kg</div></div>
+    </div>
+    <div style="font-size:12px;opacity:.75;margin-bottom:4px;" id="ex-goal-text">目標進度</div>
+    <div class="goal-bar-wrap"><div class="goal-bar-fill" id="ex-goal-bar" style="width:0%"></div></div>
+    <div style="font-size:11px;opacity:.65;margin-top:4px;" id="ex-goal-label"></div>
+  </div>
+
+  <!-- Motivation message -->
+  <div id="ex-msg" style="display:none;"></div>
+
+  <!-- Add body metrics form -->
+  <div class="card">
+    <div class="card-t">新增體態記錄</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="fg"><label class="fl">日期</label><input class="fi" type="date" id="bf-date"></div>
+      <div class="fg"><label class="fl">姓名</label>
+        <select class="fi" id="bf-name">
+          <option value="Rian">Rian</option>
+          <option value="Jack">Jack</option>
+          <option value="Jelian">Jelian</option>
+          <option value="Redd">Redd</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+      <div class="fg"><label class="fl">體重 (kg)</label><input class="fi" type="number" id="bf-weight" step="0.1" min="30" max="200" oninput="autoBMI()"></div>
+      <div class="fg"><label class="fl">BMI</label><input class="fi" type="number" id="bf-bmi" step="0.1" placeholder="自動計算"></div>
+      <div class="fg"><label class="fl">身高 (cm)</label><input class="fi" type="number" id="bf-height" step="0.1" placeholder="輸入一次" oninput="autoBMI()"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+      <div class="fg"><label class="fl">體脂肪 (%)</label><input class="fi" type="number" id="bf-fat" step="0.1"></div>
+      <div class="fg"><label class="fl">肌肉量 (kg)</label><input class="fi" type="number" id="bf-muscle" step="0.1"></div>
+      <div class="fg"><label class="fl">內臟脂肪</label><input class="fi" type="number" id="bf-visceral" step="1"></div>
+    </div>
+    <button class="btn1" onclick="saveBodyEntry()">💾 儲存體態</button>
+  </div>
+
+  <!-- Body history -->
+  <div class="card">
+    <div class="card-t">體態歷程</div>
+    <div id="body-log"></div>
+  </div>
+
+  <!-- Add exercise form -->
+  <div class="card">
+    <div class="card-t">新增運動記錄</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="fg"><label class="fl">日期</label><input class="fi" type="date" id="ef-date"></div>
+      <div class="fg"><label class="fl">運動項目</label>
+        <select class="fi" id="ef-type" onchange="onExTypeChange()">
+          <option value="跑步">🏃 跑步</option>
+          <option value="肌力">🏋️ 肌力</option>
+          <option value="拳擊有氧">🥊 拳擊有氧</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+      <div class="fg" id="ef-dist-wrap">
+        <label class="fl">距離（km）</label>
+        <input class="fi" type="number" id="ef-distance" min="0.1" max="200" step="0.1" placeholder="5.0" oninput="calcExCalories()">
+      </div>
+      <div class="fg">
+        <label class="fl">時間（分鐘）</label>
+        <input class="fi" type="number" id="ef-duration" min="1" max="300" placeholder="30" oninput="calcExCalories()">
+      </div>
+      <div class="fg">
+        <label class="fl" style="display:flex;align-items:center;gap:4px;">
+          熱量(kcal)
+          <span id="ef-cal-badge" style="display:none;font-size:9px;background:#FEF3C7;color:#92400E;padding:1px 5px;border-radius:99px;font-weight:600;">估算</span>
+        </label>
+        <input class="fi" type="number" id="ef-calories" min="0" placeholder="自動">
+      </div>
+    </div>
+    <div id="ef-cal-detail" style="font-size:11px;color:var(--c5);margin-top:-6px;margin-bottom:10px;"></div>
+    <button class="btn1" onclick="saveExerciseEntry()">💾 儲存運動</button>
+  </div>
+
+  <!-- Exercise log -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div class="card-t" style="margin:0;">運動記錄</div>
+      <div id="ex-week-stats" style="font-size:12px;color:var(--c5);"></div>
+    </div>
+    <div id="exercise-log"></div>
+  </div>
+</div>
+
 <div id="s-big" class="screen">
   <div class="screen-header">大筆支出收入 💰</div>
   <div id="big-content"></div>
@@ -295,6 +489,8 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   <button class="ni" onclick="showScreen('big')" id="ni-big"><span class="ic">💰</span>大筆</button>
   <button class="ni" onclick="showScreen('creditcard')" id="ni-creditcard"><span class="ic">💳</span>對帳</button>
   <button class="ni" onclick="showScreen('settings')" id="ni-settings"><span class="ic">⚙️</span>設定</button>
+  <button class="ni" onclick="showScreen('diet')" id="ni-diet"><span class="ic">🥗</span>飲控</button>
+  <button class="ni" onclick="showScreen('exercise')" id="ni-exercise"><span class="ic">💪</span>運動</button>
 </nav>
 
 <!-- Calculator overlay -->
@@ -340,9 +536,19 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 // ============================================================
 // DATA
 // ============================================================
-const LS_TXN = 'apple_txn';
-const LS_INC = 'apple_inc';
-const LS_SET = 'apple_set';
+const LS_TXN  = 'apple_txn';
+const LS_INC  = 'apple_inc';
+const LS_SET  = 'apple_set';
+const LS_DIET = 'rjlife_diet';
+const LS_BODY = 'rjlife_body';
+const LS_EXER = 'rjlife_exer';
+const GOAL_WEIGHT_LOSS = 3; // kg target
+function getDietLog(){ try{return JSON.parse(localStorage.getItem(LS_DIET)||'[]');}catch{return[];} }
+function saveDietLog(a){ localStorage.setItem(LS_DIET,JSON.stringify(a)); }
+function getBodyLog(){ try{return JSON.parse(localStorage.getItem(LS_BODY)||'[]');}catch{return[];} }
+function saveBodyLog(a){ localStorage.setItem(LS_BODY,JSON.stringify(a)); }
+function getExerLog(){ try{return JSON.parse(localStorage.getItem(LS_EXER)||'[]');}catch{return[];} }
+function saveExerLog(a){ localStorage.setItem(LS_EXER,JSON.stringify(a)); }
 
 const CATS = [
   {id:'food',   label:'飲食(食材)',em:'🍜'},
@@ -984,6 +1190,8 @@ function renderCurrentScreen(){
   else if(curScreen==='quarterly') renderQuarterly();
   else if(curScreen==='big') renderBigItems();
   else if(curScreen==='creditcard') renderCCPage();
+  else if(curScreen==='diet') renderDiet();
+  else if(curScreen==='exercise') renderExercise();
 }
 
 // ============================================================
@@ -1078,6 +1286,8 @@ function showScreen(s){
   if(s==='creditcard') renderCCPage();
   if(s==='settings') renderSettings();
   if(s==='big') renderBigItems();
+  if(s==='diet') renderDiet();
+  if(s==='exercise') renderExercise();
 }
 
 // ============================================================
@@ -2595,7 +2805,7 @@ function renderSettings(){
     <div style="font-size:12px;color:var(--c5);">上次登入：${lastLoginStr}</div>
     ${gToken ? `<div style="font-size:12px;color:#10B981;margin-top:4px;">✅ 已連結 Google Drive</div>` : ''}
   </div>`;
-  html+=`<div style="text-align:center;font-size:12px;color:var(--c5);padding:16px;">蘋果家記帳 v1.2 · 資料儲存於本裝置 + Google Drive</div>`;
+  html+=`<div style="text-align:center;font-size:12px;color:var(--c5);padding:16px;">RJ's Life v1.3 · 資料儲存於本裝置 + Google Drive</div>`;
   el.innerHTML=html;
 }
 
@@ -2840,6 +3050,771 @@ function fmt(n){
 function todayStr(){
   const d=new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ============================================================
+// 飲控 (DIET)
+// ============================================================
+const MEAL_LABELS = ['早餐','午餐','晚餐','點心'];
+const ENCOURAGEMENTS = [
+  '💪 每一天都是新的開始，繼續前進！',
+  '🌟 你已經做得很棒了，堅持就是勝利！',
+  '🔥 挑戰自我，超越昨天的自己！',
+  '🌈 微小的進步，積累成巨大的改變！',
+  '🍃 身體在慢慢改變，相信過程！',
+  '🏆 最好的投資就是投資自己的健康！',
+  '💡 今天的努力，是明天最好的禮物！',
+];
+
+// ── 蛋白質資料庫（可在 App 內編輯，儲存於 localStorage）──
+const LS_PROTEIN_DB = 'rjlife_protein_db';
+
+// 預設資料庫（CSV 格式字串）
+const PROTEIN_DB_DEFAULT = `品名,分量,蛋白質克數
+水煮蛋,2顆,14
+雞蛋,2顆,14
+即食雞胸肉,100g,23
+雞胸肉,100g,23
+希臘優格,200g,16
+優格,200g,16
+鮭魚,100g,21
+鯖魚,100g,21
+牛里肌肉,100g,21
+牛肉,100g,21
+無糖濃豆漿,500cc,25
+濃豆漿,500cc,25
+無糖豆漿,500cc,18
+豆漿,500cc,18
+鮮乳,500cc,16
+牛奶,500cc,16
+黑芝麻粉,30g,5.4
+核桃,40g,6.1
+奇亞籽,15g,2.5`;
+
+// 解析 CSV 字串 → PROTEIN_DB 陣列
+function parseProteinCSV(csv){
+  const lines = csv.trim().split('\n').filter(l=>l.trim());
+  const db = [];
+  for(let i=1;i<lines.length;i++){   // 跳過 header
+    const cols = lines[i].split(',').map(s=>s.trim());
+    if(cols.length < 3) continue;
+    const name = cols[0];
+    const servingStr = cols[1];       // e.g. "2顆" / "100g" / "500cc"
+    const proteinG = parseFloat(cols[2]);
+    if(!name || isNaN(proteinG)) continue;
+    // 解析分量字串
+    const m = servingStr.match(/^(\d+\.?\d*)\s*(g|克|cc|ml|顆|個|粒|碗|匙|片)?$/i);
+    const refAmt  = m ? parseFloat(m[1]) : 1;
+    const refUnit = m && m[2] ? m[2].replace(/克/,'g').replace(/ml/,'cc') : 'g';
+    db.push({ name, aliases:[name], refAmt, refUnit, proteinG });
+  }
+  return db;
+}
+
+// 序列化回 CSV（供編輯器顯示）
+function serializeProteinCSV(db){
+  const rows = ['品名,分量,蛋白質克數'];
+  db.forEach(item=>{
+    rows.push(`${item.name},${item.refAmt}${item.refUnit},${item.proteinG}`);
+  });
+  return rows.join('\n');
+}
+
+// 載入（優先 localStorage，否則用預設值）
+function loadProteinDB(){
+  const saved = localStorage.getItem(LS_PROTEIN_DB);
+  return parseProteinCSV(saved || PROTEIN_DB_DEFAULT);
+}
+
+let PROTEIN_DB = loadProteinDB();
+
+// ── 開啟蛋白質資料庫編輯 modal ──
+function openProteinDB(){
+  const csv = localStorage.getItem(LS_PROTEIN_DB) || PROTEIN_DB_DEFAULT;
+  openModal(`
+    <div class="mt">📋 蛋白質資料庫</div>
+    <p style="font-size:12px;color:var(--c5);margin-bottom:10px;line-height:1.5;">
+      格式：品名, 分量, 蛋白質克數<br>
+      每行一筆，第一行為標題列（不可刪除）<br>
+      同一食材可用不同名稱各列一行（方便比對）
+    </p>
+    <textarea id="protein-db-editor"
+      style="width:100%;height:260px;border:1.5px solid var(--c3);border-radius:10px;padding:10px;font-size:13px;font-family:monospace;line-height:1.6;resize:vertical;outline:none;"
+      spellcheck="false">${csv}</textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn1" style="flex:1;" onclick="saveProteinDB()">💾 儲存</button>
+      <button class="btn2" style="flex:0 0 auto;" onclick="resetProteinDB()">↺ 還原預設</button>
+      <button class="btn2" style="flex:0 0 auto;" onclick="closeModal()">取消</button>
+    </div>
+  `);
+  // Focus textarea and move cursor to end
+  setTimeout(()=>{
+    const ta = document.getElementById('protein-db-editor');
+    if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  }, 100);
+}
+
+function saveProteinDB(){
+  const csv = document.getElementById('protein-db-editor').value.trim();
+  const parsed = parseProteinCSV(csv);
+  if(!parsed.length){ toast('⚠️ 格式錯誤，請確認格式正確'); return; }
+  localStorage.setItem(LS_PROTEIN_DB, csv);
+  PROTEIN_DB = parsed;
+  closeModal();
+  toast(`✅ 已儲存 ${parsed.length} 筆蛋白質資料`);
+}
+
+function resetProteinDB(){
+  if(!confirm('確定還原為預設資料庫？')) return;
+  localStorage.removeItem(LS_PROTEIN_DB);
+  PROTEIN_DB = loadProteinDB();
+  closeModal();
+  toast('✅ 已還原為預設資料庫');
+}
+
+// 從文字中萃取數量（回傳相對於 refAmt 的倍率）
+function extractQtyRatio(text, item){
+  const t = text.toLowerCase();
+  const unitPatterns = {
+    'g':  [/(\d+\.?\d*)\s*(?:g|克|公克)/gi],
+    'cc': [/(\d+\.?\d*)\s*(?:cc|ml|毫升)/gi],
+    '顆': [/(\d+\.?\d*)\s*(?:顆|個|粒)/gi],
+    '碗': [/(\d+\.?\d*)\s*(?:碗)/gi],
+    '匙': [/(\d+\.?\d*)\s*(?:匙|湯匙|大匙)/gi],
+  };
+  const pats = unitPatterns[item.refUnit] || [];
+  for(const pat of pats){
+    pat.lastIndex = 0;
+    const m = pat.exec(t);
+    if(m) return parseFloat(m[1]) / item.refAmt;
+  }
+  return 1; // 未指定量 → 用參考量
+}
+
+// 估算單段文字中的蛋白質克數，回傳 [{name, g}]
+function parseProteinFromText(text){
+  if(!text || !text.trim()) return [];
+  const lowerText = text.toLowerCase().replace(/[，、,]/g,' ');
+
+  // 萃取使用者輸入中的中文／英文關鍵字（2字以上），數字與單位自動忽略
+  const keywords = [...new Set(
+    (lowerText.match(/[一-龥a-zA-Z]{2,}/g) || [])
+  )];
+
+  const matchedItems  = new Set(); // 避免同一品項重複計算
+  const usedKeywords  = new Set(); // 避免同一關鍵字匹配到多個品項（如「地瓜」同時命中三種地瓜）
+  const results = [];
+
+  for(const item of PROTEIN_DB){
+    if(matchedItems.has(item.name)) continue;
+    let hit = false;
+    let hitKw = null;
+
+    for(const alias of item.aliases){
+      const al = alias.toLowerCase();
+      // 優先：別名完整出現在使用者文字裡（精確匹配）
+      if(lowerText.includes(al)){
+        hit = true; break;
+      }
+      // 次要：使用者關鍵字是別名的子字串（如「地瓜」⊂「黃心地瓜(熟)」）
+      for(const kw of keywords){
+        if(!usedKeywords.has(kw) && al.includes(kw)){
+          hitKw = kw; hit = true; break;
+        }
+      }
+      if(hit) break;
+    }
+
+    if(hit){
+      const ratio = extractQtyRatio(lowerText, item);
+      const g = Math.round(item.proteinG * ratio * 10) / 10;
+      results.push({name: item.name, g});
+      matchedItems.add(item.name);
+      if(hitKw) usedKeywords.add(hitKw); // 這個關鍵字已用掉，不再匹配其他品項
+    }
+  }
+  return results;
+}
+
+function estimateProtein(){
+  const fields = [
+    document.getElementById('df-protein-food').value,
+    document.getElementById('df-carb-food').value,
+    document.getElementById('df-other').value,
+  ];
+  const combined = fields.filter(Boolean).join(' ');
+  if(!combined.trim()) return;
+
+  const items = parseProteinFromText(combined);
+  const total  = Math.round(items.reduce((s,i)=>s+i.g, 0) * 10) / 10;
+
+  const pgEl     = document.getElementById('df-protein-g');
+  const badge    = document.getElementById('df-pg-badge');
+  const detail   = document.getElementById('df-pg-detail');
+
+  pgEl.value = total || '';
+  badge.style.display = total ? 'inline-block' : 'none';
+
+  if(items.length){
+    detail.innerHTML = items.map(i=>`<span style="margin-right:8px;">• ${i.name} ≈ <b>${i.g}g</b></span>`).join('');
+  } else {
+    detail.innerHTML = '<span style="color:#F59E0B;">⚠ 未能比對到資料庫品項，請手動填入</span>';
+  }
+}
+
+// 初始化 30 分鐘間隔的時間下拉選單
+function initTimeSelect(id, defaultVal){
+  const sel = document.getElementById(id);
+  if(!sel || sel.options.length > 2) return; // 已初始化過
+  for(let h=0;h<24;h++){
+    for(let m of [0,30]){
+      const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = val;
+      if(val === defaultVal) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+  if(defaultVal) sel.value = defaultVal;
+}
+
+function calcFasting(){
+  const lastT = document.getElementById('df-last-time').value;  // "20:00"
+  const firstT = document.getElementById('df-first-time').value; // "09:00"
+  const preview = document.getElementById('df-fasting-preview');
+  const date = document.getElementById('df-date').value;
+
+  // Auto-calc if both filled
+  if(lastT && firstT){
+    const [lh,lm] = lastT.split(':').map(Number);
+    const [fh,fm] = firstT.split(':').map(Number);
+    let lastMins = lh*60+lm;
+    let firstMins = fh*60+fm;
+    // first meal is next day if firstMins < lastMins
+    let diff = firstMins - lastMins;
+    if(diff <= 0) diff += 24*60;
+    const hrs = (diff/60).toFixed(1);
+    preview.style.display='block';
+    preview.innerHTML=`<span class="fast-badge">⏱ 空腹斷食 <strong>${hrs}</strong> 小時</span><span style="font-size:12px;color:var(--c5);margin-left:8px;">${lastT} → 隔日 ${firstT}</span>`;
+  } else if(lastT || firstT){
+    // Try to calc from previous day's record
+    if(firstT && !lastT){
+      const log = getDietLog().filter(e=>e.date < (date||'9999'));
+      const prev = log.filter(e=>e.lastMealTime).sort((a,b)=>b.date.localeCompare(a.date))[0];
+      if(prev && prev.lastMealTime){
+        const [lh,lm] = prev.lastMealTime.split(':').map(Number);
+        const [fh,fm] = firstT.split(':').map(Number);
+        let diff = (fh*60+fm) - (lh*60+lm);
+        if(diff <= 0) diff += 24*60;
+        const hrs = (diff/60).toFixed(1);
+        preview.style.display='block';
+        preview.innerHTML=`<span class="fast-badge">⏱ 空腹斷食 <strong>${hrs}</strong> 小時</span><span style="font-size:12px;color:var(--c5);margin-left:8px;">${prev.date} ${prev.lastMealTime} → 今日 ${firstT}</span>`;
+      } else { preview.style.display='none'; }
+    } else { preview.style.display='none'; }
+  } else { preview.style.display='none'; }
+}
+
+function saveDietEntry(){
+  const date = document.getElementById('df-date').value;
+  if(!date){ toast('請填入日期'); return; }
+  const lastT  = document.getElementById('df-last-time').value;
+  const firstT = document.getElementById('df-first-time').value;
+
+  // Calculate fasting
+  let fastingH = null;
+  if(lastT && firstT){
+    const [lh,lm] = lastT.split(':').map(Number);
+    const [fh,fm] = firstT.split(':').map(Number);
+    let diff = (fh*60+fm)-(lh*60+lm);
+    if(diff<=0) diff+=1440;
+    fastingH = parseFloat((diff/60).toFixed(1));
+  } else if(firstT){
+    // look up previous day's lastMealTime
+    const log = getDietLog().filter(e=>e.date<date && e.lastMealTime).sort((a,b)=>b.date.localeCompare(a.date));
+    if(log.length){
+      const prev=log[0];
+      const [lh,lm]=prev.lastMealTime.split(':').map(Number);
+      const [fh,fm]=firstT.split(':').map(Number);
+      let diff=(fh*60+fm)-(lh*60+lm);
+      if(diff<=0) diff+=1440;
+      fastingH=parseFloat((diff/60).toFixed(1));
+    }
+  }
+
+  const entry = {
+    id: 'diet_'+Date.now(),
+    date,
+    meal:       document.getElementById('df-meal').value,
+    proteinFood:document.getElementById('df-protein-food').value.trim(),
+    carbFood:   document.getElementById('df-carb-food').value.trim(),
+    other:      document.getElementById('df-other').value.trim(),
+    proteinG:   parseFloat(document.getElementById('df-protein-g').value)||0,
+    lastMealTime: lastT||'',
+    firstMealTime:firstT||'',
+    fastingH
+  };
+
+  const log = getDietLog();
+  log.unshift(entry);
+  saveDietLog(log);
+  // Reset form (keep date)
+  ['df-protein-food','df-carb-food','df-other','df-protein-g','df-last-time','df-first-time'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  document.getElementById('df-fasting-preview').style.display='none';
+  document.getElementById('df-pg-badge').style.display='none';
+  document.getElementById('df-pg-detail').innerHTML='';
+  toast('✅ 飲食記錄已儲存');
+  renderDiet();
+}
+
+function toggleDietDetail(rid){
+  const row = document.getElementById(rid);
+  if(!row) return;
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  // 箭頭方向
+  const eid = rid.replace('dr-','');
+  const arr = document.getElementById('arr-'+eid);
+  if(arr) arr.textContent = open ? '▶' : '▼';
+}
+
+function editDietEntry(id){
+  const log = getDietLog();
+  const e = log.find(x=>x.id===id);
+  if(!e) return;
+  const mealOpts = ['早餐','午餐','晚餐','點心'];
+  // Build time options for select (will also call initTimeSelect after modal opens)
+  const mealSelHtml = mealOpts.map(m=>`<option value="${m}"${e.meal===m?' selected':''}>${m}</option>`).join('');
+  openModal(`
+    <div class="mt">✏️ 修改飲食記錄</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div>
+        <div class="lbl">日期</div>
+        <input id="de-date" class="inp" type="date" value="${e.date||''}">
+      </div>
+      <div>
+        <div class="lbl">餐別</div>
+        <select id="de-meal" class="inp">${mealSelHtml}</select>
+      </div>
+    </div>
+    <div class="lbl">🥩 蛋白質食物</div>
+    <input id="de-protein-food" class="inp" type="text" value="${(e.proteinFood||'').replace(/"/g,'&quot;')}" placeholder="例：雞胸肉100g 水煮蛋2顆">
+    <div class="lbl" style="margin-top:8px;">🍚 碳水食物</div>
+    <input id="de-carb-food" class="inp" type="text" value="${(e.carbFood||'').replace(/"/g,'&quot;')}" placeholder="例：地瓜 白飯一碗">
+    <div class="lbl" style="margin-top:8px;">🥦 其他</div>
+    <input id="de-other" class="inp" type="text" value="${(e.other||'').replace(/"/g,'&quot;')}" placeholder="例：蔬菜 水果">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px;align-items:end;">
+      <div>
+        <div class="lbl">預估蛋白質(g)</div>
+        <input id="de-protein-g" class="inp" type="number" step="0.1" value="${e.proteinG||''}" placeholder="自動估算">
+      </div>
+      <div>
+        <div class="lbl">最後一餐時間</div>
+        <select id="de-last-time" class="inp"><option value="">--</option></select>
+      </div>
+      <div>
+        <div class="lbl">第一餐時間</div>
+        <select id="de-first-time" class="inp"><option value="">--</option></select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button class="btn1" style="flex:1;" onclick="saveDietEdit('${id}')">💾 儲存修改</button>
+      <button class="btn2" style="flex:0 0 auto;" onclick="estimateDietEdit()">🔄 重新估算</button>
+      <button class="btn2" style="flex:0 0 auto;" onclick="closeModal()">取消</button>
+    </div>
+  `);
+  // Init the 30-min time selects and set saved values
+  initTimeSelect('de-last-time',  e.lastMealTime  || '20:00');
+  initTimeSelect('de-first-time', e.firstMealTime || '07:00');
+  if(e.lastMealTime)  document.getElementById('de-last-time').value  = e.lastMealTime;
+  if(e.firstMealTime) document.getElementById('de-first-time').value = e.firstMealTime;
+}
+
+function estimateDietEdit(){
+  const pf = document.getElementById('de-protein-food').value.trim();
+  const cf = document.getElementById('de-carb-food').value.trim();
+  const ot = document.getElementById('de-other').value.trim();
+  const allText = [pf,cf,ot].filter(Boolean).join(' ');
+  if(!allText){ toast('請先填入食物內容'); return; }
+  const results = parseProteinFromText(allText);
+  const total = results.reduce((s,r)=>s+r.g, 0);
+  document.getElementById('de-protein-g').value = total ? Math.round(total*10)/10 : '';
+  if(results.length)
+    toast('✅ 估算：'+results.map(r=>`${r.name} ${r.g}g`).join(' + ')+` = ${Math.round(total*10)/10}g`);
+  else
+    toast('⚠️ 找不到符合的食材，請手動填入');
+}
+
+function saveDietEdit(id){
+  const log = getDietLog();
+  const idx = log.findIndex(x=>x.id===id);
+  if(idx<0) return;
+  const date       = document.getElementById('de-date').value.trim();
+  if(!date){ toast('請填入日期'); return; }
+  const meal       = document.getElementById('de-meal').value;
+  const proteinFood= document.getElementById('de-protein-food').value.trim();
+  const carbFood   = document.getElementById('de-carb-food').value.trim();
+  const other      = document.getElementById('de-other').value.trim();
+  const proteinG   = parseFloat(document.getElementById('de-protein-g').value)||null;
+  const lastMealTime  = document.getElementById('de-last-time').value  || null;
+  const firstMealTime = document.getElementById('de-first-time').value || null;
+
+  // Recalculate fasting hours
+  let fastingH = null;
+  if(lastMealTime && firstMealTime){
+    // Same-day assumption first; if first > last, treat as overnight
+    const [lh,lm] = lastMealTime.split(':').map(Number);
+    const [fh,fm] = firstMealTime.split(':').map(Number);
+    let diff = (fh*60+fm) - (lh*60+lm);
+    if(diff <= 0) diff += 24*60;
+    fastingH = Math.round(diff/60*10)/10;
+  } else if(lastMealTime && !firstMealTime){
+    // Look at next entry's firstMealTime if available
+    const sortedLog = [...log].sort((a,b)=>a.date<b.date?-1:1);
+    const curDateIdx = sortedLog.findIndex(x=>x.id===id);
+    if(curDateIdx >= 0 && curDateIdx < sortedLog.length-1){
+      const next = sortedLog[curDateIdx+1];
+      if(next.firstMealTime){
+        const [lh,lm] = lastMealTime.split(':').map(Number);
+        const [fh,fm] = next.firstMealTime.split(':').map(Number);
+        let diff = (fh*60+fm) - (lh*60+lm);
+        if(diff <= 0) diff += 24*60;
+        fastingH = Math.round(diff/60*10)/10;
+      }
+    }
+  }
+
+  log[idx] = { ...log[idx], date, meal, proteinFood, carbFood, other, proteinG, lastMealTime, firstMealTime, fastingH };
+  saveDietLog(log);
+  closeModal();
+  toast('✅ 記錄已更新');
+  renderDiet();
+}
+
+function deleteDietEntry(id){
+  if(!confirm('確定刪除此記錄？')) return;
+  saveDietLog(getDietLog().filter(e=>e.id!==id));
+  renderDiet();
+}
+
+function renderDiet(){
+  // Init date
+  const df = document.getElementById('df-date');
+  if(!df.value) df.value = todayStr();
+  // Init 30-min time selects（只在第一次 render 時填入選項）
+  initTimeSelect('df-last-time',  '20:00');
+  initTimeSelect('df-first-time', '07:00');
+
+  const log = getDietLog();
+
+  // Populate month filter
+  const sel = document.getElementById('diet-filter-month');
+  const months = [...new Set(log.map(e=>e.date.slice(0,7)))].sort().reverse();
+  const curVal = sel.value;
+  sel.innerHTML = '<option value="all">全部</option>';
+  months.forEach(m=>{
+    const opt = document.createElement('option');
+    opt.value=m; opt.textContent=m;
+    if(m===curVal) opt.selected=true;
+    sel.appendChild(opt);
+  });
+
+  const filterM = sel.value;
+  const filtered = filterM==='all' ? log : log.filter(e=>e.date.startsWith(filterM));
+
+  const container = document.getElementById('diet-log');
+  if(!filtered.length){
+    container.innerHTML='<div style="text-align:center;color:var(--c5);padding:20px;font-size:14px;">尚無記錄</div>';
+    return;
+  }
+
+  let html='<table class="de-table"><thead><tr>';
+  ['日期','餐別','蛋白質(g)','斷食',''].forEach(h=>html+=`<th>${h}</th>`);
+  html+='</tr></thead><tbody>';
+
+  filtered.forEach(e=>{
+    const fastLabel = e.fastingH ? `<span class="fast-badge">${e.fastingH}h</span>` : '-';
+    const hasDetail = e.proteinFood || e.carbFood || e.other || e.lastMealTime || e.firstMealTime;
+    const rid = 'dr-'+e.id;
+    html+=`<tr style="cursor:pointer;" onclick="toggleDietDetail('${rid}')">
+      <td style="white-space:nowrap;font-size:12px;">${e.date}</td>
+      <td><span class="diet-tag meal-${e.meal}">${e.meal}</span></td>
+      <td style="font-weight:700;color:var(--p);text-align:center;">${e.proteinG||'-'}</td>
+      <td>${fastLabel}</td>
+      <td style="text-align:right;">
+        ${hasDetail?`<span id="arr-${e.id}" style="color:var(--c4);font-size:12px;">▶</span>`:''}
+        <button class="btn2" style="font-size:11px;padding:3px 7px;margin-right:2px;" onclick="event.stopPropagation();editDietEntry('${e.id}')">✏️</button>
+        <button class="btnd" style="font-size:11px;padding:4px 8px;" onclick="event.stopPropagation();deleteDietEntry('${e.id}')">✕</button>
+      </td>
+    </tr>
+    <tr id="${rid}" style="display:none;">
+      <td colspan="5" style="background:var(--c1);padding:10px 12px;">
+        <div style="display:grid;gap:4px;font-size:12px;color:var(--c7);">
+          ${e.proteinFood?`<div>🥩 <b>蛋白質食物：</b>${e.proteinFood}</div>`:''}
+          ${e.carbFood?`<div>🍚 <b>碳水食物：</b>${e.carbFood}</div>`:''}
+          ${e.other?`<div>🥦 <b>其他：</b>${e.other}</div>`:''}
+          ${(e.lastMealTime||e.firstMealTime)?`<div>⏰ <b>進食時段：</b>${e.firstMealTime||'?'} ～ ${e.lastMealTime||'?'}</div>`:''}
+        </div>
+      </td>
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  container.innerHTML=html;
+}
+
+// ============================================================
+// 運動 (EXERCISE)
+// ============================================================
+let savedHeight = parseFloat(localStorage.getItem('rjlife_height')||'0');
+
+function autoBMI(){
+  const w = parseFloat(document.getElementById('bf-weight').value)||0;
+  const hInput = document.getElementById('bf-height');
+  let h = parseFloat(hInput.value)||0;
+  if(h) { savedHeight=h; localStorage.setItem('rjlife_height', h); }
+  else if(savedHeight) { hInput.value=savedHeight; h=savedHeight; }
+  if(w && h){
+    const bmi = (w / ((h/100)**2)).toFixed(1);
+    document.getElementById('bf-bmi').value = bmi;
+  }
+}
+
+const MOTIVATIONS_GOOD = [
+  '🎉 完美！體重下降、肌肉量增加——這就是你要的！',
+  '🏆 太厲害了！體態正在往理想方向改變，繼續！',
+  '🔥 減脂增肌雙達標！你的努力有回報了！',
+];
+const MOTIVATIONS_RECOMP = [
+  '💪 繼續保持！體重微增但肌肉在上升，身體正在重塑！',
+  '📈 增肌中！體重增加+肌肉增加＝正確方向，別擔心數字！',
+  '🌟 這是體態重塑（Body Recomposition）的信號，堅持住！',
+];
+const MOTIVATIONS_ENCOURAGE = [
+  '🌈 每一天的努力都算數，相信自己的過程！',
+  '🌱 改變需要時間，你已經在路上了！',
+  '💡 今天休息，是為了明天更好的爆發！',
+  '🍃 身體需要時間適應，給自己一點耐心！',
+  '☀️ 最重要的是你今天出現在這裡了，這就是勝利！',
+];
+
+function getMotivation(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function saveBodyEntry(){
+  const date=document.getElementById('bf-date').value;
+  if(!date){ toast('請填入日期'); return; }
+  const w=parseFloat(document.getElementById('bf-weight').value)||null;
+  if(!w){ toast('請填入體重'); return; }
+  const entry={
+    id:'body_'+Date.now(),
+    date,
+    name:document.getElementById('bf-name').value.trim()||'Rian',
+    weight:w,
+    bmi:parseFloat(document.getElementById('bf-bmi').value)||null,
+    bodyFat:parseFloat(document.getElementById('bf-fat').value)||null,
+    muscleMass:parseFloat(document.getElementById('bf-muscle').value)||null,
+    visceralFat:parseInt(document.getElementById('bf-visceral').value)||null,
+  };
+  const log=getBodyLog();
+  log.unshift(entry);
+  saveBodyLog(log);
+  ['bf-weight','bf-bmi','bf-fat','bf-muscle','bf-visceral'].forEach(id=>document.getElementById(id).value='');
+  toast('✅ 體態記錄已儲存');
+  renderExercise();
+}
+
+function deleteBodyEntry(id){
+  if(!confirm('確定刪除？')) return;
+  saveBodyLog(getBodyLog().filter(e=>e.id!==id));
+  renderExercise();
+}
+
+// MET 值參考（Compendium of Physical Activities）
+const EXERCISE_MET = {
+  '跑步':    { met: 10.0, note: '慢跑約 8km/h' },
+  '肌力':    { met: 4.0,  note: '一般重量訓練' },
+  '拳擊有氧':{ met: 7.8,  note: '有氧拳擊課' },
+};
+
+function onExTypeChange(){
+  const type = document.getElementById('ef-type').value;
+  const distWrap = document.getElementById('ef-dist-wrap');
+  distWrap.style.display = (type === '跑步') ? 'block' : 'none';
+  if(type !== '跑步') document.getElementById('ef-distance').value = '';
+  calcExCalories();
+}
+
+function calcExCalories(){
+  const type   = document.getElementById('ef-type').value;
+  const dur    = parseFloat(document.getElementById('ef-duration').value) || 0;
+  const dist   = parseFloat(document.getElementById('ef-distance').value) || 0;
+  const badge  = document.getElementById('ef-cal-badge');
+  const detail = document.getElementById('ef-cal-detail');
+  const calEl  = document.getElementById('ef-calories');
+
+  if(!dur){ badge.style.display='none'; detail.innerHTML=''; return; }
+
+  const bodyLog  = getBodyLog().sort((a,b)=>b.date.localeCompare(a.date));
+  const weightKg = bodyLog.length ? (bodyLog[0].weight || 65) : 65;
+
+  let kcal, noteStr;
+  if(type === '跑步' && dist > 0){
+    // 距離為主的計算：跑步消耗約 kcal = 體重(kg) × 距離(km) × 1.04
+    kcal = Math.round(weightKg * dist * 1.04);
+    const pace = dur / dist;
+    noteStr = `${dist}km × ${weightKg}kg × 1.04（配速 ${Math.floor(pace)}'${String(Math.round((pace%1)*60)).padStart(2,'0')}''/km）`;
+  } else {
+    const info = EXERCISE_MET[type] || { met: 6, note: '一般運動' };
+    kcal = Math.round(info.met * weightKg * (dur / 60));
+    noteStr = `MET ${info.met} × ${weightKg}kg × ${dur}分鐘（${info.note}）`;
+  }
+
+  calEl.value = kcal;
+  badge.style.display = 'inline-block';
+  detail.innerHTML = `${noteStr} ≈ <b>${kcal} kcal</b>`;
+}
+
+function saveExerciseEntry(){
+  const date=document.getElementById('ef-date').value;
+  if(!date){ toast('請填入日期'); return; }
+  const exType = document.getElementById('ef-type').value;
+  const entry={
+    id:'ex_'+Date.now(),
+    date,
+    type: exType,
+    distance: exType==='跑步' ? (parseFloat(document.getElementById('ef-distance').value)||null) : null,
+    duration: parseInt(document.getElementById('ef-duration').value)||0,
+    calories: parseInt(document.getElementById('ef-calories').value)||0,
+  };
+  const log=getExerLog();
+  log.unshift(entry);
+  saveExerLog(log);
+  ['ef-distance','ef-duration','ef-calories'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ef-cal-badge').style.display='none';
+  document.getElementById('ef-cal-detail').innerHTML='';
+  toast('✅ 運動記錄已儲存');
+  renderExercise();
+}
+
+function deleteExerciseEntry(id){
+  if(!confirm('確定刪除？')) return;
+  saveExerLog(getExerLog().filter(e=>e.id!==id));
+  renderExercise();
+}
+
+function renderExercise(){
+  // Init date defaults
+  ['bf-date','ef-date'].forEach(id=>{ const el=document.getElementById(id); if(!el.value) el.value=todayStr(); });
+  // 距離欄位顯示狀態（依目前選項決定）
+  const efType = document.getElementById('ef-type');
+  if(efType) document.getElementById('ef-dist-wrap').style.display = efType.value==='跑步' ? 'block' : 'none';
+
+  const bodyLog = getBodyLog().sort((a,b)=>b.date.localeCompare(a.date));
+  const exLog   = getExerLog().sort((a,b)=>b.date.localeCompare(a.date));
+
+  // ── Body stats card ──
+  const latest = bodyLog[0];
+  const first  = bodyLog.length ? bodyLog[bodyLog.length-1] : null;
+  const prev   = bodyLog[1] || null;
+
+  if(latest){
+    document.getElementById('ex-weight').textContent = latest.weight ?? '--';
+    document.getElementById('ex-bmi').textContent    = latest.bmi ?? '--';
+    document.getElementById('ex-fat').textContent    = latest.bodyFat ?? '--';
+    document.getElementById('ex-muscle').textContent = latest.muscleMass ?? '--';
+
+    // Goal progress (vs first entry)
+    if(first && first.weight && latest.weight){
+      const lost = first.weight - latest.weight;
+      const pct  = Math.min(100, Math.max(0, (lost/GOAL_WEIGHT_LOSS)*100));
+      document.getElementById('ex-goal-bar').style.width = pct+'%';
+      if(lost>=GOAL_WEIGHT_LOSS){
+        document.getElementById('ex-goal-text').textContent='🎊 目標達成！已減重 '+lost.toFixed(1)+'kg';
+        document.getElementById('ex-goal-label').textContent='';
+      } else {
+        const remain = (GOAL_WEIGHT_LOSS - Math.max(0,lost)).toFixed(1);
+        document.getElementById('ex-goal-text').textContent=`目標進度：還差 ${remain} kg`;
+        document.getElementById('ex-goal-label').textContent=`起始 ${first.weight}kg → 目前 ${latest.weight}kg（已減 ${lost>0?'+':''}${lost.toFixed(1)}kg）`;
+      }
+    }
+
+    // Motivation message
+    const msgEl = document.getElementById('ex-msg');
+    if(prev && prev.weight && prev.muscleMass && latest.muscleMass){
+      const wUp = latest.weight > prev.weight;
+      const mUp = latest.muscleMass > prev.muscleMass;
+      const wDn = latest.weight < prev.weight;
+      let msg='', cls='';
+      if(wDn && mUp){ msg=getMotivation(MOTIVATIONS_GOOD);     cls='msg-green'; }
+      else if(wUp && mUp){ msg=getMotivation(MOTIVATIONS_RECOMP); cls='msg-blue'; }
+      else if(wDn && !mUp){ msg='🎯 體重下降中！肌肉稍有波動屬正常，'+getMotivation(MOTIVATIONS_ENCOURAGE); cls='msg-yellow'; }
+      else { msg=getMotivation(MOTIVATIONS_ENCOURAGE); cls='msg-orange'; }
+      msgEl.style.display='block';
+      msgEl.innerHTML=`<div class="msg-bubble ${cls}">${msg}</div>`;
+    } else { msgEl.style.display='none'; }
+  }
+
+  // ── Body log ──
+  const bodyContainer = document.getElementById('body-log');
+  if(!bodyLog.length){
+    bodyContainer.innerHTML='<div style="text-align:center;color:var(--c5);padding:16px;font-size:14px;">尚無體態記錄</div>';
+  } else {
+    let h='<div style="overflow-x:auto;"><table class="de-table"><thead><tr>';
+    ['日期','姓名','體重','BMI','體脂%','肌肉量','內臟脂肪',''].forEach(t=>h+=`<th>${t}</th>`);
+    h+='</tr></thead><tbody>';
+    bodyLog.slice(0,10).forEach((e,i)=>{
+      const prevE = bodyLog[i+1];
+      const wArrow = prevE && e.weight && prevE.weight ? (e.weight>prevE.weight?'↑':'↓') : '';
+      const wCol   = wArrow==='↑'?'color:#EF4444':wArrow==='↓'?'color:#10B981':'';
+      h+=`<tr>
+        <td style="white-space:nowrap;">${e.date}</td>
+        <td>${e.name||'-'}</td>
+        <td style="font-weight:700;${wCol}">${e.weight??'-'} ${wArrow}</td>
+        <td>${e.bmi??'-'}</td>
+        <td>${e.bodyFat??'-'}</td>
+        <td>${e.muscleMass??'-'}</td>
+        <td>${e.visceralFat??'-'}</td>
+        <td><button class="btnd" onclick="deleteBodyEntry('${e.id}')">✕</button></td>
+      </tr>`;
+    });
+    h+='</tbody></table></div>';
+    bodyContainer.innerHTML=h;
+  }
+
+  // ── Week stats ──
+  const oneWeekAgo = new Date(Date.now()-7*24*3600*1000).toISOString().slice(0,10);
+  const weekEx = exLog.filter(e=>e.date>=oneWeekAgo);
+  const weekMin = weekEx.reduce((s,e)=>s+e.duration,0);
+  const weekKcal= weekEx.reduce((s,e)=>s+e.calories,0);
+  document.getElementById('ex-week-stats').textContent = weekEx.length
+    ? `本週 ${weekEx.length} 次 · ${weekMin}分鐘 · ${weekKcal}kcal`
+    : '本週尚無運動記錄';
+
+  // ── Exercise log ──
+  const exContainer = document.getElementById('exercise-log');
+  if(!exLog.length){
+    exContainer.innerHTML='<div style="text-align:center;color:var(--c5);padding:16px;font-size:14px;">尚無運動記錄</div>';
+    return;
+  }
+  let eh='<div style="overflow-x:auto;"><table class="de-table"><thead><tr>';
+  ['日期','項目','距離','時間(分)','熱量(kcal)',''].forEach(t=>eh+=`<th>${t}</th>`);
+  eh+='</tr></thead><tbody>';
+  exLog.forEach(e=>{
+    const distCell = e.type==='跑步'
+      ? (e.distance ? `<span style="font-weight:700;color:#1D4ED8;">${e.distance}km</span>` : '-')
+      : '<span style="color:var(--c4);">—</span>';
+    eh+=`<tr>
+      <td style="white-space:nowrap;">${e.date}</td>
+      <td><span class="ex-pill ex-${e.type}">${e.type==='跑步'?'🏃':e.type==='肌力'?'🏋️':'🥊'} ${e.type}</span></td>
+      <td>${distCell}</td>
+      <td style="font-weight:700;">${e.duration||'-'}</td>
+      <td style="color:#F59E0B;font-weight:700;">${e.calories||'-'}</td>
+      <td><button class="btnd" onclick="deleteExerciseEntry('${e.id}')">✕</button></td>
+    </tr>`;
+  });
+  eh+='</tbody></table></div>';
+  exContainer.innerHTML=eh;
 }
 
 // ============================================================
