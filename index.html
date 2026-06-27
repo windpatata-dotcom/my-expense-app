@@ -157,11 +157,6 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .de-table td{padding:8px 6px;border-bottom:1px solid var(--c2);vertical-align:top;}
 .de-table tr:last-child td{border-bottom:none;}
 .de-table tr:hover td{background:var(--c1);}
-.diet-tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
-.meal-早餐{background:#FEF9C3;color:#854D0E;}
-.meal-午餐{background:#D1FAE5;color:#065F46;}
-.meal-晚餐{background:#EDE9FE;color:#5B21B6;}
-.meal-點心{background:#FFE4E6;color:#9F1239;}
 .fast-badge{background:#EFF6FF;color:#1D4ED8;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;}
 .body-card{background:linear-gradient(135deg,#6366F1,#8B5CF6);border-radius:20px;padding:20px;color:white;margin-bottom:16px;}
 .body-stat{text-align:center;}
@@ -296,67 +291,6 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   <div id="settings-content"></div>
 </div>
 
-<!-- ===== 飲控 screen ===== -->
-<div id="s-diet" class="screen">
-  <div class="screen-header">飲控 🥗</div>
-
-  <!-- Add form -->
-  <div class="card" id="diet-form-card">
-    <div class="card-t">新增記錄</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <div class="fg"><label class="fl">① 日期</label><input class="fi" type="date" id="df-date"></div>
-      <div class="fg"><label class="fl">② 餐別</label>
-        <select class="fi" id="df-meal" onchange="updateDietMealUI()">
-          <option value="早餐">早餐</option>
-          <option value="午餐">午餐</option>
-          <option value="晚餐" selected>晚餐</option>
-          <option value="點心">點心</option>
-        </select>
-      </div>
-    </div>
-    <div class="fg"><label class="fl">③ 蛋白質食物（如：雞胸肉100g、水煮蛋2顆）</label><input class="fi" type="text" id="df-protein-food" placeholder="填入蛋白質來源食物" onblur="estimateProtein()"></div>
-    <div class="fg"><label class="fl">④ 碳水食物（如：白飯一碗、吐司2片）</label><input class="fi" type="text" id="df-carb-food" placeholder="填入碳水來源食物" onblur="estimateProtein()"></div>
-    <div class="fg"><label class="fl">⑤ 其他（蔬菜、水果等）</label><input class="fi" type="text" id="df-other" placeholder="其他食物" onblur="estimateProtein()"></div>
-    <div class="fg">
-      <label class="fl" style="display:flex;align-items:center;gap:6px;">
-        ⑥ 預估蛋白質量（克）
-        <span id="df-pg-badge" style="display:none;font-size:10px;background:var(--pl);color:var(--p);padding:2px 7px;border-radius:99px;font-weight:600;">自動估算</span>
-        <button type="button" onclick="openProteinDB()" title="編輯蛋白質資料庫"
-          style="width:22px;height:22px;border-radius:50%;border:1.5px solid var(--c3);background:white;cursor:pointer;font-size:13px;line-height:1;display:inline-flex;align-items:center;justify-content:center;color:var(--c5);flex-shrink:0;padding:0;">📋</button>
-      </label>
-      <div style="position:relative;">
-        <input class="fi" type="number" id="df-protein-g" placeholder="— 填入③④⑤後自動估算 —" min="0" step="0.1" style="padding-right:70px;">
-        <button type="button" onclick="estimateProtein()" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:11px;padding:4px 8px;background:var(--pl);color:var(--p);border:none;border-radius:8px;cursor:pointer;font-weight:600;">重新估算</button>
-      </div>
-      <div id="df-pg-detail" style="font-size:11px;color:var(--c5);margin-top:4px;line-height:1.5;"></div>
-    </div>
-    <div id="df-last-time-row" class="fg" style="display:block;">
-      <label class="fl">⑦ 晚餐結束進食時間</label>
-      <select class="fi" id="df-last-time">
-        <option value="">-- 選擇時間 --</option>
-      </select>
-    </div>
-    <div id="df-first-time-row" class="fg" style="display:none;">
-      <label class="fl">⑦ 早餐開始進食時間</label>
-      <select class="fi" id="df-first-time" onchange="calcFasting()">
-        <option value="">-- 選擇時間 --</option>
-      </select>
-    </div>
-    <div id="df-fasting-preview" style="display:none;margin-bottom:12px;"></div>
-    <button class="btn1" onclick="saveDietEntry()">💾 儲存記錄</button>
-  </div>
-
-  <!-- Log -->
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div class="card-t" style="margin:0;">飲食記錄</div>
-      <select class="fi" style="width:auto;font-size:12px;padding:5px 28px 5px 8px;" id="diet-filter-month" onchange="renderDiet()">
-        <option value="all">全部</option>
-      </select>
-    </div>
-    <div id="diet-log"></div>
-  </div>
-</div>
 
 <!-- ===== 運動 screen ===== -->
 <div id="s-exercise" class="screen">
@@ -487,7 +421,6 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   <button class="ni" onclick="showScreen('big')" id="ni-big"><span class="ic">💰</span>大筆</button>
   <button class="ni" onclick="showScreen('creditcard')" id="ni-creditcard"><span class="ic">💳</span>對帳</button>
   <button class="ni" onclick="showScreen('settings')" id="ni-settings"><span class="ic">⚙️</span>設定</button>
-  <button class="ni" onclick="showScreen('diet')" id="ni-diet"><span class="ic">🥗</span>飲控</button>
   <button class="ni" onclick="showScreen('exercise')" id="ni-exercise"><span class="ic">💪</span>運動</button>
 </nav>
 
@@ -537,12 +470,9 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 const LS_TXN  = 'apple_txn';
 const LS_INC  = 'apple_inc';
 const LS_SET  = 'apple_set';
-const LS_DIET = 'rjlife_diet';
 const LS_BODY = 'rjlife_body';
 const LS_EXER = 'rjlife_exer';
 const GOAL_WEIGHT_LOSS = 3; // kg target
-function getDietLog(){ try{return JSON.parse(localStorage.getItem(LS_DIET)||'[]');}catch{return[];} }
-function saveDietLog(a){ localStorage.setItem(LS_DIET,JSON.stringify(a)); }
 function getBodyLog(){ try{return JSON.parse(localStorage.getItem(LS_BODY)||'[]');}catch{return[];} }
 function saveBodyLog(a){ localStorage.setItem(LS_BODY,JSON.stringify(a)); }
 function getExerLog(){ try{return JSON.parse(localStorage.getItem(LS_EXER)||'[]');}catch{return[];} }
@@ -1188,7 +1118,6 @@ function renderCurrentScreen(){
   else if(curScreen==='quarterly') renderQuarterly();
   else if(curScreen==='big') renderBigItems();
   else if(curScreen==='creditcard') renderCCPage();
-  else if(curScreen==='diet') renderDiet();
   else if(curScreen==='exercise') renderExercise();
 }
 
@@ -1284,7 +1213,6 @@ function showScreen(s){
   if(s==='creditcard') renderCCPage();
   if(s==='settings') renderSettings();
   if(s==='big') renderBigItems();
-  if(s==='diet') renderDiet();
   if(s==='exercise') renderExercise();
 }
 
@@ -1623,7 +1551,7 @@ function submitEntry(){
         const mAmt=i===spreadCount-1?rem:perM;
         const mDate=`${yIdx}-${mStr}-${date.split('-')[2]}`;
         txns.unshift({id:uid(),date:mDate,type:'expense',cat:selCat,sub,item,
-          amount:mAmt,payment:selPayment,note,spreadId:sId,
+          amount:mAmt,payment:selPayment,note,spreadId:sId,spreadTotal:amt,
           spreadInfo:`第${i+1}攤/共${spreadCount}攤（總額${amt.toLocaleString('zh-TW')}）`,reconciled:false});
       }
       toast(`✓ 已分攤為 ${spreadCount} 筆記錄`);
@@ -1696,14 +1624,32 @@ function populateYearSel(elId, selectedYear){
 // ── 大筆支出收入 ─────────────────────────────────────────────
 const BIG_THRESHOLD=8000;
 let bigFilterYear=new Date().getFullYear(), bigFilterType='t'; // 預設當年支出
+let bigChart=null;
 
+function parseSpreadTotal(info){
+  if(!info) return 0;
+  const m=info.match(/總額([0-9,]+)/);
+  return m?parseInt(m[1].replace(/,/g,''),10):0;
+}
 function renderBigItems(){
   const el=document.getElementById('big-content'); if(!el) return;
   const yrs=getAvailableYears();
-  const txns=getTxns().filter(t=>t.amount>=BIG_THRESHOLD);
+  // 分攤記錄：以 spreadId 去重，只保留第一筆，用原始總額判斷
+  const seenSpread=new Set();
+  const txns=[];
+  getTxns().forEach(t=>{
+    if(t.spreadId){
+      if(seenSpread.has(t.spreadId)) return;
+      seenSpread.add(t.spreadId);
+      const total=t.spreadTotal||parseSpreadTotal(t.spreadInfo);
+      if(total>=BIG_THRESHOLD) txns.push({...t,_displayAmt:total,_isSpread:true});
+    } else {
+      if(t.amount>=BIG_THRESHOLD) txns.push({...t,_displayAmt:t.amount,_isSpread:false});
+    }
+  });
   const incs=getIncs().filter(i=>i.amount>=BIG_THRESHOLD);
-  const all=[...txns.map(t=>({...t,_kind:'t'})),...incs.map(i=>({...i,_kind:'i'}))]
-    .sort((a,b)=>b.amount-a.amount||b.date.localeCompare(a.date));
+  const all=[...txns.map(t=>({...t,_kind:'t'})),...incs.map(i=>({...i,_kind:'i',_displayAmt:i.amount}))]
+    .sort((a,b)=>b._displayAmt-a._displayAmt||b.date.localeCompare(a.date));
 
   const yrOpts=`<option value="">全部年份</option>`+yrs.map(y=>`<option value="${y}"${bigFilterYear===y?' selected':''}>${y}年</option>`).join('');
 
@@ -1713,8 +1659,8 @@ function renderBigItems(){
     return true;
   });
 
-  const totalExp=shown.filter(r=>r._kind==='t').reduce((s,r)=>s+r.amount,0);
-  const totalInc=shown.filter(r=>r._kind==='i').reduce((s,r)=>s+r.amount,0);
+  const totalExp=shown.filter(r=>r._kind==='t').reduce((s,r)=>s+r._displayAmt,0);
+  const totalInc=shown.filter(r=>r._kind==='i').reduce((s,r)=>s+r._displayAmt,0);
 
   // Type toggle (同記帳頁樣式)
   const togHtml=`<div class="toggle" style="margin-bottom:10px;">
@@ -1736,9 +1682,25 @@ function renderBigItems(){
     <div class="scard exp"><div class="sl">支出</div><div class="sv">${fmt(totalExp)}</div></div>
   </div>`;
 
+  // 月份圖表（跟著 type filter 連動）
+  const yrFilter=r=>bigFilterYear?+r.date.split('-')[0]===bigFilterYear:true;
+  const expByMonth=Array(12).fill(0);
+  const incByMonth=Array(12).fill(0);
+  all.filter(r=>r._kind==='t'&&yrFilter(r)).forEach(r=>{expByMonth[+r.date.split('-')[1]-1]+=r._displayAmt;});
+  all.filter(r=>r._kind==='i'&&yrFilter(r)).forEach(r=>{incByMonth[+r.date.split('-')[1]-1]+=r._displayAmt;});
+  const showExp=bigFilterType==='t'||bigFilterType==='all';
+  const showInc=bigFilterType==='i'||bigFilterType==='all';
+  const hasChartData=(showExp&&expByMonth.some(v=>v>0))||(showInc&&incByMonth.some(v=>v>0));
+  const chartTitle=bigFilterType==='t'?'📊 大筆支出月份分佈':bigFilterType==='i'?'📊 大筆收入月份分佈':'📊 大筆收支月份分佈';
+  if(hasChartData){
+    html+=`<div class="card"><div class="card-t">${chartTitle}${bigFilterYear?' · '+bigFilterYear+'年':''}</div><div class="cc" style="max-height:200px;"><canvas id="big-chart"></canvas></div></div>`;
+  }
+
   if(!shown.length){
     html+=`<div class="es"><div class="ei">🔍</div>沒有超過 ${fmt(BIG_THRESHOLD)} 的記錄</div>`;
-    el.innerHTML=html; return;
+    el.innerHTML=html;
+    if(hasChartData) _renderBigChart(expByMonth,incByMonth,showExp,showInc);
+    return;
   }
 
   html+=`<div class="card">
@@ -1752,13 +1714,14 @@ function renderBigItems(){
           <div class="big-name">${r.source}</div>
           <div class="big-meta">${r.date} · 收入</div>
         </div>
-        <div class="big-amt" style="color:var(--g);">+${fmt(r.amount)}</div>
+        <div class="big-amt" style="color:var(--g);">+${fmt(r._displayAmt)}</div>
       </div>`;
     } else {
       const cat=CAT_MAP[r.cat]||{em:'📦',label:'其他'};
       const user=r.sub||'';
       const pm=getAllPayments().find(p=>p.id===r.payment);
-      const meta=[r.date, cat.em+cat.label, user, pm?pm.label:''].filter(Boolean).join(' · ');
+      const spreadLabel=r._isSpread?` · 分攤${r.spreadInfo.match(/共(\d+)攤/)?.[1]||''}個月`:'';
+      const meta=[r.date, cat.em+cat.label, user, pm?pm.label:''].filter(Boolean).join(' · ')+spreadLabel;
       const isFixed=r.type==='fixed';
       html+=`<div class="big-row">
         <div class="tic" style="background:${isFixed?'#FEF3C7':'#FEE2E2'};">${isFixed?'📌':cat.em}</div>
@@ -1766,13 +1729,40 @@ function renderBigItems(){
           <div class="big-name">${r.item||cat.label}${user?' ('+user+')':''}</div>
           <div class="big-meta">${meta}</div>
         </div>
-        <div class="big-amt" style="color:${isFixed?'var(--w)':'var(--r)'};">-${fmt(r.amount)}</div>
+        <div class="big-amt" style="color:${isFixed?'var(--w)':'var(--r)'};">-${fmt(r._displayAmt)}</div>
       </div>`;
     }
   });
 
   html+=`</div>`;
   el.innerHTML=html;
+  if(hasChartData) _renderBigChart(expByMonth,incByMonth,showExp,showInc);
+}
+
+function _renderBigChart(expByMonth,incByMonth,showExp,showInc){
+  if(bigChart){bigChart.destroy();bigChart=null;}
+  const ctx=document.getElementById('big-chart'); if(!ctx) return;
+  const labels=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const datasets=[];
+  if(showExp) datasets.push({label:'支出',data:expByMonth,backgroundColor:expByMonth.map(v=>v>0?'rgba(239,68,68,0.75)':'rgba(220,220,220,0.3)'),borderRadius:6,borderSkipped:false});
+  if(showInc) datasets.push({label:'收入',data:incByMonth,backgroundColor:incByMonth.map(v=>v>0?'rgba(34,197,94,0.75)':'rgba(220,220,220,0.3)'),borderRadius:6,borderSkipped:false});
+  const allVals=[...(showExp?expByMonth:[]),...(showInc?incByMonth:[])];
+  const maxVal=Math.max(...allVals,1);
+  bigChart=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets},
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      plugins:{
+        legend:{display:datasets.length>1,position:'top',labels:{font:{size:11},boxWidth:12}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label} $${c.raw.toLocaleString('zh-TW')}`}}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:11}}},
+        y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{callback:v=>v>=10000?'$'+(v/10000).toFixed(0)+'萬':'$'+v.toLocaleString('zh-TW'),font:{size:10}},max:Math.ceil(maxVal*1.15/1000)*1000,beginAtZero:true}
+      }
+    }
+  });
 }
 
 function renderRecentFilter(){
@@ -3048,551 +3038,6 @@ function fmt(n){
 function todayStr(){
   const d=new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
-// ============================================================
-// 飲控 (DIET)
-// ============================================================
-const MEAL_LABELS = ['早餐','午餐','晚餐','點心'];
-const ENCOURAGEMENTS = [
-  '💪 每一天都是新的開始，繼續前進！',
-  '🌟 你已經做得很棒了，堅持就是勝利！',
-  '🔥 挑戰自我，超越昨天的自己！',
-  '🌈 微小的進步，積累成巨大的改變！',
-  '🍃 身體在慢慢改變，相信過程！',
-  '🏆 最好的投資就是投資自己的健康！',
-  '💡 今天的努力，是明天最好的禮物！',
-];
-
-// ── 蛋白質資料庫（可在 App 內編輯，儲存於 localStorage）──
-const LS_PROTEIN_DB = 'rjlife_protein_db';
-
-// 預設資料庫（CSV 格式字串）
-const PROTEIN_DB_DEFAULT = `品名,分量,蛋白質克數
-水煮蛋,2顆,14
-雞蛋,2顆,14
-即食雞胸肉,100g,23
-雞胸肉,100g,23
-希臘優格,200g,16
-優格,200g,16
-鮭魚,100g,21
-鯖魚,100g,21
-牛里肌肉,100g,21
-牛肉,100g,21
-無糖濃豆漿,500cc,25
-濃豆漿,500cc,25
-無糖豆漿,500cc,18
-豆漿,500cc,18
-鮮乳,500cc,16
-牛奶,500cc,16
-黑芝麻粉,30g,5.4
-核桃,40g,6.1
-奇亞籽,15g,2.5`;
-
-// 解析 CSV 字串 → PROTEIN_DB 陣列
-function parseProteinCSV(csv){
-  const lines = csv.trim().split('\n').filter(l=>l.trim());
-  const db = [];
-  for(let i=1;i<lines.length;i++){   // 跳過 header
-    const cols = lines[i].split(',').map(s=>s.trim());
-    if(cols.length < 3) continue;
-    const name = cols[0];
-    const servingStr = cols[1];       // e.g. "2顆" / "100g" / "500cc"
-    const proteinG = parseFloat(cols[2]);
-    if(!name || isNaN(proteinG)) continue;
-    // 解析分量字串
-    const m = servingStr.match(/^(\d+\.?\d*)\s*(g|克|cc|ml|顆|個|粒|碗|匙|片)?$/i);
-    const refAmt  = m ? parseFloat(m[1]) : 1;
-    const refUnit = m && m[2] ? m[2].replace(/克/,'g').replace(/ml/,'cc') : 'g';
-    db.push({ name, aliases:[name], refAmt, refUnit, proteinG });
-  }
-  return db;
-}
-
-// 序列化回 CSV（供編輯器顯示）
-function serializeProteinCSV(db){
-  const rows = ['品名,分量,蛋白質克數'];
-  db.forEach(item=>{
-    rows.push(`${item.name},${item.refAmt}${item.refUnit},${item.proteinG}`);
-  });
-  return rows.join('\n');
-}
-
-// 載入（優先 localStorage，否則用預設值）
-function loadProteinDB(){
-  const saved = localStorage.getItem(LS_PROTEIN_DB);
-  return parseProteinCSV(saved || PROTEIN_DB_DEFAULT);
-}
-
-let PROTEIN_DB = loadProteinDB();
-
-// ── 開啟蛋白質資料庫編輯 modal ──
-function openProteinDB(){
-  const csv = localStorage.getItem(LS_PROTEIN_DB) || PROTEIN_DB_DEFAULT;
-  openModal(`
-    <div class="mt">📋 蛋白質資料庫</div>
-    <p style="font-size:12px;color:var(--c5);margin-bottom:10px;line-height:1.5;">
-      格式：品名, 分量, 蛋白質克數<br>
-      每行一筆，第一行為標題列（不可刪除）<br>
-      同一食材可用不同名稱各列一行（方便比對）
-    </p>
-    <textarea id="protein-db-editor"
-      style="width:100%;height:260px;border:1.5px solid var(--c3);border-radius:10px;padding:10px;font-size:13px;font-family:monospace;line-height:1.6;resize:vertical;outline:none;"
-      spellcheck="false">${csv}</textarea>
-    <div style="display:flex;gap:8px;margin-top:12px;">
-      <button class="btn1" style="flex:1;" onclick="saveProteinDB()">💾 儲存</button>
-      <button class="btn2" style="flex:0 0 auto;" onclick="resetProteinDB()">↺ 還原預設</button>
-      <button class="btn2" style="flex:0 0 auto;" onclick="closeModal()">取消</button>
-    </div>
-  `);
-  // Focus textarea and move cursor to end
-  setTimeout(()=>{
-    const ta = document.getElementById('protein-db-editor');
-    if(ta){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
-  }, 100);
-}
-
-function saveProteinDB(){
-  const csv = document.getElementById('protein-db-editor').value.trim();
-  const parsed = parseProteinCSV(csv);
-  if(!parsed.length){ toast('⚠️ 格式錯誤，請確認格式正確'); return; }
-  localStorage.setItem(LS_PROTEIN_DB, csv);
-  PROTEIN_DB = parsed;
-  closeModal();
-  toast(`✅ 已儲存 ${parsed.length} 筆蛋白質資料`);
-}
-
-function resetProteinDB(){
-  if(!confirm('確定還原為預設資料庫？')) return;
-  localStorage.removeItem(LS_PROTEIN_DB);
-  PROTEIN_DB = loadProteinDB();
-  closeModal();
-  toast('✅ 已還原為預設資料庫');
-}
-
-// 從文字中萃取數量（回傳相對於 refAmt 的倍率）
-function extractQtyRatio(text, item){
-  const t = text.toLowerCase();
-  const unitPatterns = {
-    'g':  [/(\d+\.?\d*)\s*(?:g|克|公克)/gi],
-    'cc': [/(\d+\.?\d*)\s*(?:cc|ml|毫升)/gi],
-    '顆': [/(\d+\.?\d*)\s*(?:顆|個|粒)/gi],
-    '碗': [/(\d+\.?\d*)\s*(?:碗)/gi],
-    '匙': [/(\d+\.?\d*)\s*(?:匙|湯匙|大匙)/gi],
-  };
-  const pats = unitPatterns[item.refUnit] || [];
-  for(const pat of pats){
-    pat.lastIndex = 0;
-    const m = pat.exec(t);
-    if(m) return parseFloat(m[1]) / item.refAmt;
-  }
-  return 1; // 未指定量 → 用參考量
-}
-
-// 估算單段文字中的蛋白質克數，回傳 [{name, g}]
-function parseProteinFromText(text){
-  if(!text || !text.trim()) return [];
-  const lowerText = text.toLowerCase().replace(/[，、,]/g,' ');
-
-  // 萃取使用者輸入中的中文／英文關鍵字（2字以上），數字與單位自動忽略
-  const keywords = [...new Set(
-    (lowerText.match(/[一-龥a-zA-Z]{2,}/g) || [])
-  )];
-
-  const matchedItems  = new Set(); // 避免同一品項重複計算
-  const usedKeywords  = new Set(); // 避免同一關鍵字匹配到多個品項（如「地瓜」同時命中三種地瓜）
-  const results = [];
-
-  for(const item of PROTEIN_DB){
-    if(matchedItems.has(item.name)) continue;
-    let hit = false;
-    let hitKw = null;
-
-    for(const alias of item.aliases){
-      const al = alias.toLowerCase();
-      // 優先：別名完整出現在使用者文字裡（精確匹配）
-      if(lowerText.includes(al)){
-        hit = true; break;
-      }
-      // 次要：使用者關鍵字是別名的子字串（如「地瓜」⊂「黃心地瓜(熟)」）
-      for(const kw of keywords){
-        if(!usedKeywords.has(kw) && al.includes(kw)){
-          hitKw = kw; hit = true; break;
-        }
-      }
-      if(hit) break;
-    }
-
-    if(hit){
-      const ratio = extractQtyRatio(lowerText, item);
-      const g = Math.round(item.proteinG * ratio * 10) / 10;
-      results.push({name: item.name, g});
-      matchedItems.add(item.name);
-      if(hitKw) usedKeywords.add(hitKw); // 這個關鍵字已用掉，不再匹配其他品項
-    }
-  }
-  return results;
-}
-
-function estimateProtein(){
-  const fields = [
-    document.getElementById('df-protein-food').value,
-    document.getElementById('df-carb-food').value,
-    document.getElementById('df-other').value,
-  ];
-  const combined = fields.filter(Boolean).join(' ');
-  if(!combined.trim()) return;
-
-  const items = parseProteinFromText(combined);
-  const total  = Math.round(items.reduce((s,i)=>s+i.g, 0) * 10) / 10;
-
-  const pgEl     = document.getElementById('df-protein-g');
-  const badge    = document.getElementById('df-pg-badge');
-  const detail   = document.getElementById('df-pg-detail');
-
-  pgEl.value = total || '';
-  badge.style.display = total ? 'inline-block' : 'none';
-
-  if(items.length){
-    detail.innerHTML = items.map(i=>`<span style="margin-right:8px;">• ${i.name} ≈ <b>${i.g}g</b></span>`).join('');
-  } else {
-    detail.innerHTML = '<span style="color:#F59E0B;">⚠ 未能比對到資料庫品項，請手動填入</span>';
-  }
-}
-
-// 初始化 30 分鐘間隔的時間下拉選單
-function initTimeSelect(id, defaultVal){
-  const sel = document.getElementById(id);
-  if(!sel || sel.options.length > 2) return; // 已初始化過
-  for(let h=0;h<24;h++){
-    for(let m of [0,30]){
-      const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-      const opt = document.createElement('option');
-      opt.value = val;
-      opt.textContent = val;
-      if(val === defaultVal) opt.selected = true;
-      sel.appendChild(opt);
-    }
-  }
-  if(defaultVal) sel.value = defaultVal;
-}
-
-// 根據餐別顯示/隱藏時間欄位
-function updateDietMealUI(){
-  const meal = document.getElementById('df-meal').value;
-  const lastRow  = document.getElementById('df-last-time-row');
-  const firstRow = document.getElementById('df-first-time-row');
-  const preview  = document.getElementById('df-fasting-preview');
-  if(meal==='晚餐'){
-    lastRow.style.display='';
-    firstRow.style.display='none';
-    document.getElementById('df-first-time').value='';
-  } else if(meal==='早餐'){
-    lastRow.style.display='none';
-    firstRow.style.display='';
-    document.getElementById('df-last-time').value='';
-  } else {
-    lastRow.style.display='none';
-    firstRow.style.display='none';
-    document.getElementById('df-last-time').value='';
-    document.getElementById('df-first-time').value='';
-  }
-  preview.style.display='none';
-}
-
-// 重新計算所有早餐的斷食時數（從前一筆晚餐結束到早餐開始）
-function recalcAllFasting(log){
-  const sorted = [...log].sort((a,b)=>
-    a.date<b.date?-1:a.date>b.date?1:a.id<b.id?-1:1);
-  let lastDinner = null;
-  for(const e of sorted){
-    if(e.meal==='晚餐' && e.lastMealTime) lastDinner = e;
-    else if(e.meal==='早餐' && e.firstMealTime){
-      if(lastDinner){
-        const [lh,lm] = lastDinner.lastMealTime.split(':').map(Number);
-        const [fh,fm] = e.firstMealTime.split(':').map(Number);
-        let diff = (fh*60+fm)-(lh*60+lm);
-        if(diff<=0) diff+=1440;
-        e.fastingH = parseFloat((diff/60).toFixed(1));
-      } else {
-        e.fastingH = null;
-      }
-    }
-  }
-  return sorted;
-}
-
-// 早餐填入開始時間後即時預覽斷食時數
-function calcFasting(){
-  const firstT = document.getElementById('df-first-time').value;
-  const preview = document.getElementById('df-fasting-preview');
-  const date = document.getElementById('df-date').value;
-  if(!firstT){ preview.style.display='none'; return; }
-  // 找最近一筆有 lastMealTime 的晚餐
-  const allLog = getDietLog().filter(e=>e.lastMealTime);
-  const prev = allLog
-    .filter(e=> !date || e.date<=date)
-    .sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id))[0];
-  if(prev){
-    const [lh,lm] = prev.lastMealTime.split(':').map(Number);
-    const [fh,fm] = firstT.split(':').map(Number);
-    let diff = (fh*60+fm)-(lh*60+lm);
-    if(diff<=0) diff+=1440;
-    const hrs = (diff/60).toFixed(1);
-    preview.style.display='block';
-    preview.innerHTML=`<span class="fast-badge">⏱ 空腹斷食 <strong>${hrs}</strong> 小時</span><span style="font-size:12px;color:var(--c5);margin-left:8px;">${prev.date} ${prev.lastMealTime} → ${date||'今日'} ${firstT}</span>`;
-  } else {
-    preview.style.display='none';
-  }
-}
-
-function saveDietEntry(){
-  const date = document.getElementById('df-date').value;
-  if(!date){ toast('請填入日期'); return; }
-  const meal = document.getElementById('df-meal').value;
-  // 依餐別只取對應的時間欄位
-  const lastT  = meal==='晚餐' ? (document.getElementById('df-last-time').value||'')  : '';
-  const firstT = meal==='早餐' ? (document.getElementById('df-first-time').value||'') : '';
-
-  // 斷食時數只在早餐且有填開始時間時計算
-  let fastingH = null;
-  if(meal==='早餐' && firstT){
-    const prevLog = getDietLog()
-      .filter(e=>e.lastMealTime && e.date<=date)
-      .sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
-    if(prevLog.length){
-      const prev=prevLog[0];
-      const [lh,lm]=prev.lastMealTime.split(':').map(Number);
-      const [fh,fm]=firstT.split(':').map(Number);
-      let diff=(fh*60+fm)-(lh*60+lm);
-      if(diff<=0) diff+=1440;
-      fastingH=parseFloat((diff/60).toFixed(1));
-    }
-  }
-
-  const entry = {
-    id: 'diet_'+Date.now(),
-    date, meal,
-    proteinFood:document.getElementById('df-protein-food').value.trim(),
-    carbFood:   document.getElementById('df-carb-food').value.trim(),
-    other:      document.getElementById('df-other').value.trim(),
-    proteinG:   parseFloat(document.getElementById('df-protein-g').value)||0,
-    lastMealTime: lastT,
-    firstMealTime: firstT,
-    fastingH
-  };
-
-  let log = getDietLog();
-  log.unshift(entry);
-  // 存完晚餐後，重算所有早餐的斷食時數（可能有之前存的早餐還沒配對）
-  if(meal==='晚餐' && lastT) log = recalcAllFasting(log);
-  saveDietLog(log);
-  // Reset form (keep date)
-  ['df-protein-food','df-carb-food','df-other','df-protein-g','df-last-time','df-first-time'].forEach(id=>{
-    document.getElementById(id).value='';
-  });
-  document.getElementById('df-fasting-preview').style.display='none';
-  document.getElementById('df-pg-badge').style.display='none';
-  document.getElementById('df-pg-detail').innerHTML='';
-  toast('✅ 飲食記錄已儲存');
-  renderDiet();
-}
-
-function toggleDietDetail(rid){
-  const row = document.getElementById(rid);
-  if(!row) return;
-  const open = row.style.display !== 'none';
-  row.style.display = open ? 'none' : 'table-row';
-  // 箭頭方向
-  const eid = rid.replace('dr-','');
-  const arr = document.getElementById('arr-'+eid);
-  if(arr) arr.textContent = open ? '▶' : '▼';
-}
-
-function editDietEntry(id){
-  const log = getDietLog();
-  const e = log.find(x=>x.id===id);
-  if(!e) return;
-  const mealOpts = ['早餐','午餐','晚餐','點心'];
-  // Build time options for select (will also call initTimeSelect after modal opens)
-  const mealSelHtml = mealOpts.map(m=>`<option value="${m}"${e.meal===m?' selected':''}>${m}</option>`).join('');
-  const showLast  = e.meal==='晚餐';
-  const showFirst = e.meal==='早餐';
-  openModal(`
-    <div class="mt">✏️ 修改飲食記錄</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-      <div>
-        <div class="lbl">日期</div>
-        <input id="de-date" class="inp" type="date" value="${e.date||''}">
-      </div>
-      <div>
-        <div class="lbl">餐別</div>
-        <select id="de-meal" class="inp" onchange="updateDietEditMealUI()">${mealSelHtml}</select>
-      </div>
-    </div>
-    <div class="lbl">🥩 蛋白質食物</div>
-    <input id="de-protein-food" class="inp" type="text" value="${(e.proteinFood||'').replace(/"/g,'&quot;')}" placeholder="例：雞胸肉100g 水煮蛋2顆">
-    <div class="lbl" style="margin-top:8px;">🍚 碳水食物</div>
-    <input id="de-carb-food" class="inp" type="text" value="${(e.carbFood||'').replace(/"/g,'&quot;')}" placeholder="例：地瓜 白飯一碗">
-    <div class="lbl" style="margin-top:8px;">🥦 其他</div>
-    <input id="de-other" class="inp" type="text" value="${(e.other||'').replace(/"/g,'&quot;')}" placeholder="例：蔬菜 水果">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;align-items:end;">
-      <div>
-        <div class="lbl">預估蛋白質(g)</div>
-        <input id="de-protein-g" class="inp" type="number" step="0.1" value="${e.proteinG||''}" placeholder="自動估算">
-      </div>
-      <div id="de-last-time-row" style="display:${showLast?'':'none'};">
-        <div class="lbl">晚餐結束時間</div>
-        <select id="de-last-time" class="inp"><option value="">--</option></select>
-      </div>
-      <div id="de-first-time-row" style="display:${showFirst?'':'none'};">
-        <div class="lbl">早餐開始時間</div>
-        <select id="de-first-time" class="inp"><option value="">--</option></select>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:14px;">
-      <button class="btn1" style="flex:1;" onclick="saveDietEdit('${id}')">💾 儲存修改</button>
-      <button class="btn2" style="flex:0 0 auto;" onclick="estimateDietEdit()">🔄 重新估算</button>
-      <button class="btn2" style="flex:0 0 auto;" onclick="closeModal()">取消</button>
-    </div>
-  `);
-  // Init the 30-min time selects and set saved values
-  initTimeSelect('de-last-time',  e.lastMealTime  || '20:00');
-  initTimeSelect('de-first-time', e.firstMealTime || '07:00');
-  if(e.lastMealTime)  document.getElementById('de-last-time').value  = e.lastMealTime;
-  if(e.firstMealTime) document.getElementById('de-first-time').value = e.firstMealTime;
-}
-
-function updateDietEditMealUI(){
-  const meal = document.getElementById('de-meal').value;
-  const lastRow  = document.getElementById('de-last-time-row');
-  const firstRow = document.getElementById('de-first-time-row');
-  if(meal==='晚餐'){
-    lastRow.style.display='';
-    firstRow.style.display='none';
-    document.getElementById('de-first-time').value='';
-  } else if(meal==='早餐'){
-    lastRow.style.display='none';
-    firstRow.style.display='';
-    document.getElementById('de-last-time').value='';
-  } else {
-    lastRow.style.display='none';
-    firstRow.style.display='none';
-    document.getElementById('de-last-time').value='';
-    document.getElementById('de-first-time').value='';
-  }
-}
-
-function estimateDietEdit(){
-  const pf = document.getElementById('de-protein-food').value.trim();
-  const cf = document.getElementById('de-carb-food').value.trim();
-  const ot = document.getElementById('de-other').value.trim();
-  const allText = [pf,cf,ot].filter(Boolean).join(' ');
-  if(!allText){ toast('請先填入食物內容'); return; }
-  const results = parseProteinFromText(allText);
-  const total = results.reduce((s,r)=>s+r.g, 0);
-  document.getElementById('de-protein-g').value = total ? Math.round(total*10)/10 : '';
-  if(results.length)
-    toast('✅ 估算：'+results.map(r=>`${r.name} ${r.g}g`).join(' + ')+` = ${Math.round(total*10)/10}g`);
-  else
-    toast('⚠️ 找不到符合的食材，請手動填入');
-}
-
-function saveDietEdit(id){
-  const log = getDietLog();
-  const idx = log.findIndex(x=>x.id===id);
-  if(idx<0) return;
-  const date       = document.getElementById('de-date').value.trim();
-  if(!date){ toast('請填入日期'); return; }
-  const meal       = document.getElementById('de-meal').value;
-  const proteinFood= document.getElementById('de-protein-food').value.trim();
-  const carbFood   = document.getElementById('de-carb-food').value.trim();
-  const other      = document.getElementById('de-other').value.trim();
-  const proteinG   = parseFloat(document.getElementById('de-protein-g').value)||null;
-  // 依餐別只讀取對應時間欄位
-  const lastMealTime  = meal==='晚餐' ? (document.getElementById('de-last-time').value||'')  : '';
-  const firstMealTime = meal==='早餐' ? (document.getElementById('de-first-time').value||'') : '';
-
-  log[idx] = { ...log[idx], date, meal, proteinFood, carbFood, other, proteinG, lastMealTime, firstMealTime, fastingH: null };
-  // 重新計算全部早餐的斷食時數
-  const recalced = recalcAllFasting(log);
-  saveDietLog(recalced);
-  closeModal();
-  toast('✅ 記錄已更新');
-  renderDiet();
-}
-
-function deleteDietEntry(id){
-  if(!confirm('確定刪除此記錄？')) return;
-  saveDietLog(getDietLog().filter(e=>e.id!==id));
-  renderDiet();
-}
-
-function renderDiet(){
-  // Init date
-  const df = document.getElementById('df-date');
-  if(!df.value) df.value = todayStr();
-  // Init 30-min time selects（只在第一次 render 時填入選項）
-  initTimeSelect('df-last-time',  '20:00');
-  initTimeSelect('df-first-time', '07:00');
-  // 根據目前選擇的餐別決定顯示哪個時間欄位
-  updateDietMealUI();
-
-  const log = getDietLog();
-
-  // Populate month filter
-  const sel = document.getElementById('diet-filter-month');
-  const months = [...new Set(log.map(e=>e.date.slice(0,7)))].sort().reverse();
-  const curVal = sel.value;
-  sel.innerHTML = '<option value="all">全部</option>';
-  months.forEach(m=>{
-    const opt = document.createElement('option');
-    opt.value=m; opt.textContent=m;
-    if(m===curVal) opt.selected=true;
-    sel.appendChild(opt);
-  });
-
-  const filterM = sel.value;
-  const filtered = filterM==='all' ? log : log.filter(e=>e.date.startsWith(filterM));
-
-  const container = document.getElementById('diet-log');
-  if(!filtered.length){
-    container.innerHTML='<div style="text-align:center;color:var(--c5);padding:20px;font-size:14px;">尚無記錄</div>';
-    return;
-  }
-
-  let html='<table class="de-table"><thead><tr>';
-  ['日期','餐別','蛋白質(g)','斷食',''].forEach(h=>html+=`<th>${h}</th>`);
-  html+='</tr></thead><tbody>';
-
-  filtered.forEach(e=>{
-    const fastLabel = e.fastingH ? `<span class="fast-badge">${e.fastingH}h</span>` : '-';
-    const hasDetail = e.proteinFood || e.carbFood || e.other || e.lastMealTime || e.firstMealTime;
-    const rid = 'dr-'+e.id;
-    html+=`<tr style="cursor:pointer;" onclick="toggleDietDetail('${rid}')">
-      <td style="white-space:nowrap;font-size:12px;">${e.date}</td>
-      <td><span class="diet-tag meal-${e.meal}">${e.meal}</span></td>
-      <td style="font-weight:700;color:var(--p);text-align:center;">${e.proteinG||'-'}</td>
-      <td>${fastLabel}</td>
-      <td style="text-align:right;">
-        ${hasDetail?`<span id="arr-${e.id}" style="color:var(--c4);font-size:12px;">▶</span>`:''}
-        <button class="btn2" style="font-size:11px;padding:3px 7px;margin-right:2px;" onclick="event.stopPropagation();editDietEntry('${e.id}')">✏️</button>
-        <button class="btnd" style="font-size:11px;padding:4px 8px;" onclick="event.stopPropagation();deleteDietEntry('${e.id}')">✕</button>
-      </td>
-    </tr>
-    <tr id="${rid}" style="display:none;">
-      <td colspan="5" style="background:var(--c1);padding:10px 12px;">
-        <div style="display:grid;gap:4px;font-size:12px;color:var(--c7);">
-          ${e.proteinFood?`<div>🥩 <b>蛋白質食物：</b>${e.proteinFood}</div>`:''}
-          ${e.carbFood?`<div>🍚 <b>碳水食物：</b>${e.carbFood}</div>`:''}
-          ${e.other?`<div>🥦 <b>其他：</b>${e.other}</div>`:''}
-          ${(e.lastMealTime||e.firstMealTime)?`<div>⏰ <b>進食時段：</b>${e.firstMealTime||'?'} ～ ${e.lastMealTime||'?'}</div>`:''}
-        </div>
-      </td>
-    </tr>`;
-  });
-  html+='</tbody></table>';
-  container.innerHTML=html;
 }
 
 // ============================================================
