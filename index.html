@@ -1634,15 +1634,25 @@ function parseSpreadTotal(info){
 function renderBigItems(){
   const el=document.getElementById('big-content'); if(!el) return;
   const yrs=getAvailableYears();
-  // 分攤記錄：以 spreadId 去重，只保留第一筆，用原始總額判斷
-  const seenSpread=new Set();
+  // 分攤記錄：先按 spreadId 分組，取最早月份為代表、顯示原始總額
+  const allRawTxns=getTxns();
+  const spreadGroups=new Map();
+  allRawTxns.forEach(t=>{
+    if(!t.spreadId) return;
+    if(!spreadGroups.has(t.spreadId)) spreadGroups.set(t.spreadId,[]);
+    spreadGroups.get(t.spreadId).push(t);
+  });
+  const processedSpreads=new Set();
   const txns=[];
-  getTxns().forEach(t=>{
+  allRawTxns.forEach(t=>{
     if(t.spreadId){
-      if(seenSpread.has(t.spreadId)) return;
-      seenSpread.add(t.spreadId);
-      const total=t.spreadTotal||parseSpreadTotal(t.spreadInfo);
-      if(total>=BIG_THRESHOLD) txns.push({...t,_displayAmt:total,_isSpread:true});
+      if(processedSpreads.has(t.spreadId)) return;
+      processedSpreads.add(t.spreadId);
+      const grp=spreadGroups.get(t.spreadId);
+      // 用最早月份的日期作為代表
+      const earliest=grp.reduce((a,b)=>a.date<=b.date?a:b);
+      const total=earliest.spreadTotal||parseSpreadTotal(earliest.spreadInfo)||grp.reduce((s,x)=>s+x.amount,0);
+      if(total>=BIG_THRESHOLD) txns.push({...earliest,_displayAmt:total,_isSpread:true,_spreadCount:grp.length});
     } else {
       if(t.amount>=BIG_THRESHOLD) txns.push({...t,_displayAmt:t.amount,_isSpread:false});
     }
@@ -1720,7 +1730,7 @@ function renderBigItems(){
       const cat=CAT_MAP[r.cat]||{em:'📦',label:'其他'};
       const user=r.sub||'';
       const pm=getAllPayments().find(p=>p.id===r.payment);
-      const spreadLabel=r._isSpread?` · 分攤${r.spreadInfo.match(/共(\d+)攤/)?.[1]||''}個月`:'';
+      const spreadLabel=r._isSpread?` · 📆 分攤 ${r._spreadCount||r.spreadInfo?.match(/共(\d+)攤/)?.[1]||''} 個月`:''
       const meta=[r.date, cat.em+cat.label, user, pm?pm.label:''].filter(Boolean).join(' · ')+spreadLabel;
       const isFixed=r.type==='fixed';
       html+=`<div class="big-row">
@@ -1811,9 +1821,11 @@ function renderRecentRow(r){
   const recBtn=isCC?`<span title="${r.reconciled?'已對帳，點擊取消':'尚未對帳，點擊標記'}"
     onclick="event.stopPropagation();toggleReconcile('${r.id}')"
     style="cursor:pointer;font-size:15px;flex-shrink:0;opacity:${r.reconciled?1:0.3};">${r.reconciled?'✅':'☑️'}</span>`:'';
+  const spreadTag=r.spreadInfo?`<span style="font-size:11px;background:#EFF6FF;color:#3B82F6;border-radius:99px;padding:1px 7px;font-weight:600;flex-shrink:0;">📆 ${r.spreadInfo}</span>`:'';
   return `<div class="txn-compact" onclick="editRecord('${r.id}','t')" style="cursor:pointer;${r.reconciled?'opacity:.7;':''}">
     <div class="tc-main">
       <span class="tc-name">${r.type==='fixed'?'📌':cat.em} ${lbl}</span>
+      ${spreadTag}
       <span class="tc-sep">${d}</span>
       ${pmLabel?`<span class="tc-sep">${pmLabel}</span>`:''}
       <span class="tc-amt ${cls}">-${fmt(r.amount)}</span>
@@ -1889,13 +1901,13 @@ function getSpreadGroup(txn){
   if(txn.spreadId){
     return all.filter(t=>t.spreadId===txn.spreadId).sort((a,b)=>a.date.localeCompare(b.date));
   }
-  // Old records without spreadId: match by cat+item+sub+payment+totalStr in spreadInfo
+  // Old records without spreadId: match by cat+item+payment+totalStr in spreadInfo
   if(!txn.spreadInfo) return [txn];
   const m=txn.spreadInfo.match(/總額([\d,]+)/);
   if(!m) return [txn];
   const totalStr=m[1];
   return all.filter(t=>
-    t.cat==='edu'&&t.item===txn.item&&t.sub===txn.sub&&
+    t.cat===txn.cat&&t.item===txn.item&&
     t.payment===txn.payment&&t.spreadInfo&&t.spreadInfo.includes(`總額${totalStr}`)
   ).sort((a,b)=>a.date.localeCompare(b.date));
 }
@@ -1905,14 +1917,22 @@ function updateSpreadPreview(){
   if(!el||!_spreadEditGroup) return;
   const rawAmt=document.getElementById('m-amt');
   const total=parseFloat((rawAmt?.dataset.raw||rawAmt?.value||'0').replace(/,/g,''))||0;
-  const n=_spreadEditGroup.length;
+  const nInput=document.getElementById('m-spread-n');
+  const n=nInput?Math.max(1,parseInt(nInput.value)||1):_spreadEditGroup.length;
   if(total<=0||n===0){ el.innerHTML=''; return; }
   const perM=Math.floor(total/n);
   const rem=total-perM*(n-1);
-  const rows=_spreadEditGroup.map((t,i)=>{
+  // Generate month list: use existing dates for current months, extend/trim as needed
+  const baseDate=_spreadEditGroup[0]?.date||new Date().toISOString().slice(0,10);
+  const [baseY,baseM]=baseDate.slice(0,7).split('-').map(Number);
+  const rows=Array.from({length:n},(_,i)=>{
+    let mIdx=baseM+i, yIdx=baseY;
+    while(mIdx>12){mIdx-=12;yIdx++;}
+    const ym=`${yIdx}-${String(mIdx).padStart(2,'0')}`;
     const mAmt=i===n-1?rem:perM;
-    return `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid var(--c2);">
-      <span style="color:var(--c5);">${t.date.slice(0,7)}</span>
+    const isNew=i>=_spreadEditGroup.length;
+    return `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid var(--c2);${isNew?'color:var(--p);':''}">
+      <span style="color:${isNew?'var(--p)':'var(--c5)'};">${ym}${isNew?' ✦新增':''}</span>
       <span style="font-weight:500;">${fmt(mAmt)} 元</span>
     </div>`;
   }).join('');
@@ -1939,17 +1959,27 @@ function editSpreadGroup(id){
       <span style="font-weight:500;">${fmt(mAmt)} 元</span>
     </div>`;
   }).join('');
+  const isEdu=txn.cat==='edu';
+  const subHtml=isEdu?`<div class="fg"><label class="fl">對象</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0;">${SUB_EDU.map(s=>`<label style="display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer;"><input type="checkbox" class="m-sub-cb" value="${s}" ${(txn.sub||'').split('、').includes(s)?'checked':''}> ${s}</label>`).join('')}</div></div>`:'';
   openModal(`<div class="mt">編輯整組分攤</div>
     <div style="padding:8px 12px;background:#EFF6FF;border-radius:8px;font-size:12px;color:#1E40AF;margin-bottom:12px;">
-      📌 共 ${n} 個月｜${firstDate} ～ ${lastDate}
+      📆 共 ${n} 個月｜${firstDate} ～ ${lastDate}
     </div>
     <div class="fg"><label class="fl">新總金額</label>
       <input class="fi big" id="m-amt" type="text" inputmode="decimal" value="${totalAmt}"
         oninput="amtInput(this);updateSpreadPreview()"
         onblur="amtBlur(this);updateSpreadPreview()"
         onfocus="amtFocus(this)"></div>
-    <div class="fg"><label class="fl">對象</label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0;">${SUB_EDU.map(s=>`<label style="display:flex;align-items:center;gap:4px;font-size:14px;cursor:pointer;"><input type="checkbox" class="m-sub-cb" value="${s}" ${(txn.sub||'').split('、').includes(s)?'checked':''}> ${s}</label>`).join('')}</div></div>
+    <div class="fg"><label class="fl">分攤月數</label>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input class="fi" id="m-spread-n" type="number" min="1" max="60" value="${n}" style="width:80px;"
+          oninput="updateSpreadPreview()">
+        <span style="font-size:12px;color:var(--c5);">（目前 ${n} 個月，從 ${firstDate} 起）</span>
+      </div></div>
+    <div class="fg"><label class="fl">類別</label>
+      <select class="fi" id="m-cat">${CATS.map(c=>`<option value="${c.id}"${c.id===txn.cat?' selected':''}>${c.em} ${c.label}</option>`).join('')}</select></div>
+    ${subHtml}
     <div class="fg"><label class="fl">項目說明</label>
       <input class="fi" id="m-item" value="${txn.item||''}"></div>
     <div class="fg"><label class="fl">支付方式</label>
@@ -1959,9 +1989,7 @@ function editSpreadGroup(id){
       <button class="btn1" style="flex:1" onclick="saveSpreadGroup('${id}')">儲存整組</button>
       <button class="btnd" onclick="delSpreadGroup('${id}')">刪除整組</button>
     </div>
-    <div style="text-align:center;margin-top:10px;">
-      <button class="btn2" style="font-size:12px;padding:6px 14px;" onclick="editSingleTxn('${id}')">只修改此筆</button>
-    </div>`);
+    `);
 }
 
 function saveSpreadGroup(id){
@@ -1970,24 +1998,43 @@ function saveSpreadGroup(id){
   const rawAmt=document.getElementById('m-amt');
   const total=parseFloat((rawAmt.dataset.raw||rawAmt.value).replace(/,/g,''));
   if(!total||total<=0){ toast('請輸入金額'); return; }
+  const nInput=document.getElementById('m-spread-n');
+  const newN=nInput?Math.max(1,parseInt(nInput.value)||group.length):group.length;
+  const cat=document.getElementById('m-cat')?.value||group[0].cat;
   const sub=[...document.querySelectorAll('.m-sub-cb:checked')].map(c=>c.value).join('、');
   const item=document.getElementById('m-item').value;
   const payment=document.getElementById('m-pay').value;
-  const n=group.length;
-  const perM=Math.floor(total/n);
-  const rem=total-perM*(n-1);
-  const txns=getTxns();
-  group.forEach((gt,i)=>{
-    const t=txns.find(x=>String(x.id)===String(gt.id)); if(!t) return;
-    t.amount=i===n-1?rem:perM;
-    t.sub=sub; t.item=item; t.payment=payment;
-    t.spreadInfo=`第${i+1}攤/共${n}攤（總額${total.toLocaleString('zh-TW')}）`;
+  const perM=Math.floor(total/newN);
+  const rem=total-perM*(newN-1);
+  const baseDate=group[0].date;
+  const [baseY,baseM]=baseDate.slice(0,7).split('-').map(Number);
+  const spreadId=group[0].spreadId||uid();
+  // Build new list of n months
+  const newEntries=Array.from({length:newN},(_,i)=>{
+    let mIdx=baseM+i, yIdx=baseY;
+    while(mIdx>12){mIdx-=12;yIdx++;}
+    const mStr=String(mIdx).padStart(2,'0');
+    const mAmt=i===newN-1?rem:perM;
+    const mDate=`${yIdx}-${mStr}-${baseDate.slice(8)}`;
+    const existing=group[i];
+    return existing
+      ? {...existing, amount:mAmt, cat, sub, item, payment, spreadId, spreadTotal:total,
+          spreadInfo:`第${i+1}攤/共${newN}攤（總額${total.toLocaleString('zh-TW')}）`}
+      : {id:uid(), date:mDate, type:'expense', cat, sub, item, amount:mAmt,
+          payment, note:'', spreadId, spreadTotal:total, reconciled:false,
+          spreadInfo:`第${i+1}攤/共${newN}攤（總額${total.toLocaleString('zh-TW')}）`};
   });
+  // Remove old group entries, insert new ones
+  const oldIds=new Set(group.map(t=>String(t.id)));
+  let txns=getTxns().filter(t=>!oldIds.has(String(t.id)));
+  // Insert new entries at original position (before first non-group entry)
+  txns=[...newEntries,...txns];
   saveTxns(txns);
   _spreadEditGroup=null;
   closeModal(); renderRecent();
   if(curScreen==='monthly') renderMonthly();
-  toast('✓ 已更新整組分攤');
+  if(curScreen==='big') renderBigItems();
+  toast(`✓ 已更新整組分攤（共 ${newN} 個月）`);
 }
 
 function delSpreadGroup(id){
@@ -2043,8 +2090,8 @@ function editRecord(id, kind){
       </div>`);
   } else {
     const txn=getTxns().find(x=>String(x.id)===sid); if(!txn) return;
-    // Spread edu records → batch edit by default
-    if(txn.cat==='edu'&&txn.spreadInfo){ editSpreadGroup(id); return; }
+    // All spread records → batch edit by default
+    if(txn.spreadInfo){ editSpreadGroup(id); return; }
     const allPay=getAllPayments();
     const isEdu=txn.cat==='edu';
     const subHtml=isEdu?`<div class="fg"><label class="fl">對象</label>
@@ -3305,3 +3352,4 @@ document.getElementById('month-display').textContent=`${curYear}年 ${MONTHS_TW[
 </script>
 </body>
 </html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
