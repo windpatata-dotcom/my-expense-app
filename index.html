@@ -1820,7 +1820,7 @@ function renderRecentRow(r){
     const d=r.date.replace(/-/g,'/');
     return `<div class="txn-compact" onclick="editRecord('${r.id}','i')" style="cursor:pointer;">
       <div class="tc-main">
-        <span class="tc-name">💰 ${r.source}</span>
+        <span class="tc-name">💰 ${r.source}${r.note?`（${r.note}）`:''}</span>
         <span class="tc-sep">${d}</span>
         <span class="tc-sep">收入</span>
         <span class="tc-amt inc">+${fmt(r.amount)}</span>
