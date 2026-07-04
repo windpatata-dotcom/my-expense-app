@@ -1346,9 +1346,13 @@ function renderEntryForm(){
     f.innerHTML=`
       <div class="fg"><label class="fl">金額（元）</label>${amtField}</div>
       <div class="fg"><label class="fl">收入來源</label>
-        <select class="fi" id="inp-src">
+        <select class="fi" id="inp-src" onchange="toggleIncNote()">
           ${INC_SRCS.map(s=>`<option value="${s}">${s}</option>`).join('')}
         </select></div>
+      <div class="fg" id="inc-note-row" style="display:none;">
+        <label class="fl">備註（其他收入說明）</label>
+        <input class="fi" id="inp-inc-note" type="text" placeholder="例：賣二手物品、獎金、退稅…">
+      </div>
       <div class="fg"><label class="fl">日期</label>
         <input class="fi" id="inp-date" type="date" value="${todayStr()}"></div>
       <button class="btn1" onclick="submitEntry()">✓ 新增收入</button>`;
@@ -1522,6 +1526,16 @@ function renderSubArea(){
   } else { el.innerHTML=''; }
 }
 
+function toggleIncNote(){
+  const src=document.getElementById('inp-src')?.value||'';
+  const row=document.getElementById('inc-note-row');
+  if(row) row.style.display=(src==='其他收入')?'':'none';
+  if(src!=='其他收入'){
+    const ni=document.getElementById('inp-inc-note');
+    if(ni) ni.value='';
+  }
+}
+
 function submitEntry(){
   const amt=getAmt();
   if(!amt||amt<=0){ toast('請輸入金額'); return; }
@@ -1569,11 +1583,14 @@ function submitEntry(){
 
   } else if(entryType==='income'){
     const src=document.getElementById('inp-src')?.value||'';
+    const incNote=src==='其他收入'?(document.getElementById('inp-inc-note')?.value||'').trim():'';
     const incs=getIncs();
-    incs.unshift({id:uid(),date,source:src,amount:amt,note});
+    incs.unshift({id:uid(),date,source:src,amount:amt,note:incNote});
     saveIncs(incs);
     toast('✓ 已記錄收入');
     setAmt(0, true);
+    const ni=document.getElementById('inp-inc-note');
+    if(ni) ni.value='';
 
   } else {
     // Fixed expense override
